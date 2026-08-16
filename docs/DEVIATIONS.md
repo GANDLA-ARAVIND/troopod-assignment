@@ -47,6 +47,11 @@ This file is that record. Every meaningful difference between `reference/purelan
 | DEV-021 | Bundle per-unit price computed exactly, not hand-rounded | 5 | Yes (documented) | **Implemented** |
 | DEV-022 | Marquee repeat count and duration computed, not fixed | 6 | Yes (restores intent) | **Implemented** |
 | DEV-023 | Review stars reflect the real rating | 6 | Yes (documented) | **Implemented** |
+| DEV-024 | First hero slide marked active server-side | QA | Yes (restores intent) | **Implemented** |
+| DEV-025 | Shared stylesheet loaded once, globally | QA | Yes (restores intent) | **Implemented** |
+| DEV-026 | Autoplay does not resume while hovered or focused | QA | No | **Implemented** |
+| DEV-027 | Combo rail item carries width and snap, card fills it | QA | Yes (restores intent) | **Implemented** |
+| DEV-028 | Reviews and combos configured as blocks, not metaobjects | QA | No | **Implemented** |
 
 ---
 
@@ -620,6 +625,119 @@ Required by "real Shopify data", and by the accessibility baseline's "ratings ha
 
 ### Visual output change
 **Yes (documented).** A review rated below 5 shows fewer stars. Every review in the reference is five stars, so at reference data the output is identical. Half-star rendering is not implemented — the reference has no such treatment to reproduce, and the exact value is always available in text.
+
+---
+
+## DEV-024 — First hero slide marked active server-side
+
+**Area:** Hero · **Phase:** Final QA · **Status:** Implemented
+**Not a prototype deviation** — a defect in our own code, found by rendering the page.
+
+### The defect
+No slide carried `is-on` in the server-rendered HTML; the class was applied only by `goTo(0)` once the custom element booted. Since `.pl-hero__slide { opacity: 0 }` and `.pl-hero__bottle { opacity: 0 }`, the entire product stage was invisible until JavaScript ran — including the slide-1 image deliberately marked `loading="eager" fetchpriority="high"` as the LCP candidate. A no-JS visitor saw an empty stage.
+
+### Correction
+`{% if forloop.first %} is-on{% endif %}` on the slide class. `goTo(0)` is idempotent, so the JS path is unchanged.
+
+### Verified
+Puppeteer with JavaScript disabled: hero product renders at 425×666px, opacity 1.
+
+### Visual output change
+**Yes (restores intent).** The hero is visible immediately rather than after JS boot.
+
+---
+
+## DEV-025 — Shared stylesheet loaded once, globally
+
+**Area:** Foundation + all five sections · **Phase:** Final QA · **Status:** Implemented
+**Not a prototype deviation** — an architectural defect in our own code.
+
+### The defect
+Each section emitted its own `<link>` to `purelane-base.css`. With all five on one page the browser kept **all five in the cascade**, so the last copy sat *after* `purelane-hero.css`, `purelane-reviews.css` and `purelane-combos.css` and overrode their rules at equal specificity.
+
+Confirmed by reading the document's stylesheet order — base.css at positions 1, 3, 5, 7 and 9 of 10.
+
+Casualties, all silent:
+- `.pl-hero__badges { position: absolute }` lost to `.pl-glass-2 { position: relative }`, so the desktop promise rail rendered in normal flow at the top-left of the grid instead of pinned right-centre. **This was visible in the first screenshot and is what exposed the bug.**
+- `.pl-combo { padding: 0 }`, `.pl-tier { padding: 24px 22px }` and `.pl-rcard { padding: 15px 17px }` all lost to `.pl-card { padding: 16px }`.
+- Only the product grid, last in the cascade, was unaffected.
+
+### Correction
+`purelane-base.css` is loaded once from `layout/theme.liquid`, immediately after Dawn's own `base.css`; the five sections load only their own stylesheet. Base is now always first, so section rules always win.
+
+### Reason
+Root cause rather than raising specificity rule by rule, which would have been endless. It matches how Dawn loads its own `base.css`.
+
+### Trade-off
+The 20 KB foundation now loads on every page rather than only pages with a Purelane section. Acceptable, and the same trade Dawn already makes. Phase 9 can revisit.
+
+### Verified
+Stylesheet order now lists base.css exactly once, first. Badges measured at `position: absolute`, x=1196 — the right edge of the 1180px grid minus 18px, as designed.
+
+### Visual output change
+**Yes (restores intent).** Restores the layout the CSS always described.
+
+---
+
+## DEV-026 — Autoplay does not resume while hovered or focused
+
+**Area:** Hero · **Phase:** Final QA · **Status:** Implemented
+
+### The defect
+`onDotClick` and `onDotKeydown` both ended with `this.play()`. `play()` had no notion of "the visitor is still here", so clicking or arrow-keying a dot restarted autoplay even though the pointer or keyboard focus was still inside the carousel — defeating the pause that DEV-019 introduced. Caught by a Puppeteer test that focused a dot and watched the slide change underneath it.
+
+### Correction
+`hovered` and `focused` are tracked as state by the four listeners, and `play()` returns early while either is true. The dot handlers still call `play()`; it simply becomes a no-op until the visitor leaves.
+
+### Verified
+Focus a dot, wait 5s: slide index unchanged. Hover: unchanged. Move away: autoplay resumes.
+
+### Visual output change
+**No.**
+
+---
+
+## DEV-027 — Combo rail item carries width and snap, card fills it
+
+**Area:** Combos · **Phase:** Final QA · **Status:** Implemented
+
+### The defect
+In the reference, `.combo` is itself the rail's flex item, so `align-items: stretch` gave every card the tallest card's height. Wrapping each card in an `<li>` for list semantics made the **`<li>`** the flex item; the card inside stayed content-height, so cards ended ragged with their CTAs at different heights.
+
+### Correction
+`.pl-comborail > li` takes `flex: 0 0 302px` (268px ≤760px) and `scroll-snap-align: start`; `.pl-combo` becomes `flex: 1 1 auto; width: 100%`.
+
+### Also fixed alongside
+- **Saving pill under the corner flag.** The reference pill reads "You save ₹398"; a store using `$398.00 USD` overflowed under the flag. Capped with `.pl-combo__tray:has(.pl-combo__flag) .pl-combo__save { max-width: calc(100% - 104px) }`.
+- **Space before the comma** in the generated includes sentence ("Cleaner , Dishwash") — whitespace control in the loop.
+
+### Visual output change
+**Yes (restores intent).** Equal card heights and aligned CTAs, as the reference has.
+
+---
+
+## DEV-028 — Reviews and combos configured as blocks, not metaobjects
+
+**Area:** Reviews, Combos · **Phase:** Final QA · **Status:** Implemented — **revisit**
+
+### What happened
+The `review` and `combo` metaobject definitions and all ten entries were created on the store exactly as [DATA_MODEL.md](DATA_MODEL.md) specifies, with `PUBLIC_READ` storefront access and every entry `ACTIVE`.
+
+But a `metaobject_list` **section setting could not be populated by authoring `templates/index.json` directly**. Five value formats were tried — GIDs, bare handles, bare numeric ids, `shopify://metaobjects/<type>/<handle>`, and `shopify://metaobjects/<type>/<id>`. In every case Liquid received a `MetaobjectListDrop` with `size == 0`. The drop resolves, the references do not.
+
+### Correction
+Both sections were built from the start with `review` / `combo` **block fallbacks**, and the homepage is configured with those. All content, ordering and behaviour are identical.
+
+**Metaobjects still take precedence in code.** The moment a merchant opens the theme editor and picks the entries in the Reviews or Combos picker — which writes whatever internal format Shopify expects — the section switches to the metaobject path with no code change. The entries are already on the store waiting.
+
+### Reason
+The approved data model is intact and demonstrably built; only the *authoring route* for that one setting type is unavailable outside the theme editor. Blocks were the documented fallback for exactly this situation.
+
+### Visual output change
+**No.** Identical rendering from either source.
+
+### To finish the metaobject story
+Open the theme editor → Purelane reviews → **Reviews** → select the five entries; same for Purelane combos → **Combos**. Roughly two minutes, and it proves the metaobject path end to end.
 
 ---
 

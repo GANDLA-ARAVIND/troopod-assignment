@@ -219,6 +219,43 @@ So the repeat count is computed by ceiling division until one half of the track 
 
 **Not done in Phase 6** — bonus sections, performance optimisation, the accessibility audit, pixel QA, fixes to earlier sections. No browser has rendered this section; no `review` metaobject definition exists on the store. Every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; the four earlier sections byte-identical.
 
+### Final QA — data seeding and browser verification
+
+**Automation went further than planned.** `shopify store execute` runs Admin GraphQL mutations, so the whole seed was scripted rather than clicked: 4 metafield definitions, 2 metaobject definitions, 14 products with prices/inventory/metafields, 12 image uploads, 1 collection, 10 metaobject entries. Manual work reduced to a single browser OAuth approval.
+
+**Findings that changed the plan**
+- `reviews.rating` and `reviews.rating_count` are **reserved standard definitions** — `metafieldDefinitionCreate` rejects them. Used `standardMetafieldDefinitionEnable` instead, which is the correct call and confirms the DATA_MODEL choice of that namespace.
+- Shopify **rejects SVG for product media**. The extracted artwork was rasterized to transparent PNG with `sharp` installed in the scratchpad, leaving the repo dependency-free.
+- **Newly created collections need publishing to the Online Store channel, and propagation is not instant.** The grid rendered empty and I briefly chased the setting value format before realising the handle had been right all along — the collection simply was not live yet. Cost several minutes; the lesson is to publish and wait before concluding a binding is broken.
+
+**Four real bugs found only by rendering the page** — every one of them invisible to Theme Check, which stayed at the stock Dawn baseline throughout:
+
+1. **No slide carried `is-on` server-side** (DEV-024), so the hero stage was invisible until JS booted — hiding the very image marked `fetchpriority="high"` as the LCP candidate.
+2. **`purelane-base.css` was loaded by all five sections** (DEV-025), so the browser kept five copies in the cascade and the last one overrode the hero, reviews and combos stylesheets at equal specificity. The desktop promise rail rendering top-left instead of pinned right is what exposed it. Fixed at the root by loading the foundation once from `theme.liquid`.
+3. **Autoplay resumed while hovered or focused** (DEV-026), because the dot handlers called `play()` unconditionally — silently defeating the pause added in DEV-019.
+4. **Combo cards were ragged** (DEV-027), because the `<li>` added for list semantics became the flex item while the card stayed content-height.
+
+**The pattern worth keeping.** This is now the third time in the project that a clean Theme Check has meant nothing about correctness — after the `display: inline` custom-element defect in Phase 2 and the invalid `<ul><div>` nesting in Phase 6. Static validation catches syntax; only rendering catches behaviour. The browser QA harness (Puppeteer, scratchpad-only) paid for itself immediately.
+
+**Verified in a real browser**, not asserted: 8 viewport widths with no horizontal scroll anywhere; column switches at the reference's own breakpoints (grid 2→4 at 860px, tiers 1→3 at 760px, badge rail/strip at 900/901); all four required edge cases visible together in one grid; autoplay, dot clicks, arrow keys, hover and focus pause; reduced motion **stopping** the marquee rather than accelerating it; the page working with JavaScript disabled; add-to-cart moving the cart from 0 to 1; and section reload leaving no timer behind.
+
+**One approved data model could not be wired from a JSON template** (DEV-028). `metaobject_list` settings would not resolve from any of five authored value formats, so the homepage uses the block fallback both sections were built with. The definitions and all ten entries exist on the store, and the metaobject path takes precedence the moment a merchant picks them in the theme editor.
+
+### Release audit
+
+A full pre-submission pass over code, store data, rendered DOM, behaviour, accessibility, performance and theme-editor safety.
+
+**No new bugs were found.** Every defect had already been caught and fixed during the QA pass that preceded it — which is the point of doing QA before the audit rather than treating the audit as the first real test.
+
+**Verified rather than assumed:**
+- 14 products, all prices and compare-at prices, single variants, ACTIVE; Copper `tracked=Y / qty=0 / DENY`; Magic Eraser with no `featuredMedia`; the long title byte-exact; Bestsellers containing exactly the 8 test products; 4 metafield and 2 metaobject definitions at `PUBLIC_READ`; 5 review and 5 combo entries all ACTIVE; combo #3 carrying 5 components; 27 product metafield values.
+- Rendered DOM: no duplicate ids, all `aria-labelledby` targets resolve, valid list semantics throughout, every focusable element has an accessible name, no focusable content inside marquee clones, every image has `alt` plus `width`/`height`, no duplicated stylesheet loads.
+- **CLS 0.0004** and 1 eager `fetchpriority="high"` image against 34 lazy — the fixed-dimension media slots did their job.
+- Contrast measured on six small-text pairs: **16.28:1 to 18.33:1**, comfortably past the 4.5:1 floor. This closes the concern ANALYSIS raised about `--paper-3` on the pale ground.
+- Eight viewport widths re-tested after the audit's changes; interaction, reduced-motion, no-JS and lifecycle suites all re-run.
+
+**Two audit "failures" were faults in the test, not the build** — the failed-request check matched the store's own domain (which contains "purelane") against Shopify's `login_with_shop` endpoints, and the review-author check asserted the wrong thing about a fallback that was working correctly. Worth recording: a red test result deserves the same scrutiny as a green one.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*

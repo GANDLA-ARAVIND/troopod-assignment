@@ -77,10 +77,18 @@ if (!customElements.get('purelane-hero-stage')) {
 
         // Pause on hover AND on focus. The prototype only did hover, which
         // leaves a keyboard user unable to stop the carousel moving under them.
-        this.addEventListener('mouseenter', this.pause);
-        this.addEventListener('mouseleave', this.play);
-        this.addEventListener('focusin', this.pause);
-        this.addEventListener('focusout', this.play);
+        //
+        // These are tracked as state rather than just calling pause()/play(),
+        // because the dot handlers below also call play() after changing slide.
+        // Without the guard in play(), clicking or arrow-keying a dot restarts
+        // autoplay while the pointer or focus is still inside the carousel.
+        this.hovered = false;
+        this.focused = false;
+
+        this.addEventListener('mouseenter', () => { this.hovered = true; this.pause(); });
+        this.addEventListener('mouseleave', () => { this.hovered = false; this.play(); });
+        this.addEventListener('focusin', () => { this.focused = true; this.pause(); });
+        this.addEventListener('focusout', () => { this.focused = false; this.play(); });
 
         this.goTo(0, { announce: false });
         this.startVisibilityWatch();
@@ -164,6 +172,8 @@ if (!customElements.get('purelane-hero-stage')) {
       play() {
         if (this.timer || !this.autoplayEnabled || this.reduced) return;
         if (this.slides.length < 2 || !this.visible) return;
+        // Never resume while the visitor is still hovering or focused inside.
+        if (this.hovered || this.focused) return;
         this.timer = setInterval(() => this.goTo(this.index + 1, { announce: false }), this.interval);
       }
 

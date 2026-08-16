@@ -140,14 +140,7 @@
         <p class="pl-combo__includes">
           Includes:
           {%- for item in components -%}
-            {{ ' ' }}{{ item.title | escape }}
-            {%- if forloop.last -%}
-              .
-            {%- elsif forloop.index == penultimate -%}
-              {{ ' ' }}&amp;
-            {%- else -%}
-              ,
-            {%- endif -%}
+            {{ ' ' }}{{ item.title | escape }}{% if forloop.last %}.{% elsif forloop.index == penultimate %} &amp;{% else %},{% endif %}
           {%- endfor -%}
         </p>
       {%- endif -%}

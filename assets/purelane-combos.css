@@ -31,9 +31,20 @@
 /* --------------------------------------------------------------------------
    2. CARD — reference lines 514-516, 739-740
    -------------------------------------------------------------------------- */
-.pl-combo {
+/* The rail item carries the width and the snap point; the card fills it, so
+   every card in the rail shares the tallest card's height and their CTAs line
+   up. In the reference the card WAS the flex item - the <li> wrapper added for
+   list semantics would otherwise leave the cards content-height and ragged. */
+.pl-comborail > li {
   flex: 0 0 302px;
   scroll-snap-align: start;
+  display: flex;
+  min-width: 0;
+}
+
+.pl-combo {
+  flex: 1 1 auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -61,6 +72,13 @@
 
 .pl-combo__save {
   margin-bottom: 13px;
+}
+
+/* The reference's saving pill reads "You save ₹398". A store using a longer
+   money format ("$398.00 USD") runs the pill under the corner flag, so it is
+   capped when a flag is present. */
+.pl-combo__tray:has(.pl-combo__flag) .pl-combo__save {
+  max-width: calc(100% - 104px);
 }
 
 .pl-combo__flag {
@@ -197,7 +215,7 @@
    7. RESPONSIVE — reference lines 580-594
    -------------------------------------------------------------------------- */
 @media (max-width: 760px) {
-  .pl-combo {
+  .pl-comborail > li {
     flex: 0 0 268px;
   }
 

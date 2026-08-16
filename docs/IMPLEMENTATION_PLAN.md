@@ -28,18 +28,18 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Shopify / Dawn setup | **In progress** — Dawn pulled ✅; store seeding + Git baseline outstanding |
-| 1 | Foundation / design system | **Minimum foundation implemented — detailed QA pending** |
-| 2 | Hero | **Implemented; carousel defect fixed — awaiting user re-test in the storefront** |
-| 3 | Shop / Product Grid | **Implemented — not yet browser-verified** |
-| 4 | Best-selling Combos | **Implemented — not yet browser-verified** |
-| 5 | Bundles | **Implemented — not yet browser-verified** |
-| 6 | Reviews Rail | **Implemented — not yet browser-verified** |
-| 7 | Responsive QA | Not started |
-| 8 | Accessibility QA | Not started |
-| 9 | Performance QA | Not started |
-| 10 | Final visual comparison | Not started |
-| 11 | Documentation and submission | Not started |
+| 0 | Shopify / Dawn setup | **Complete — Dawn pulled, store seeded (14 products, 10 metaobjects)** |
+| 1 | Foundation / design system | **Complete — verified in release audit** |
+| 2 | Hero | **Complete — verified in browser** |
+| 3 | Shop / Product Grid | **Complete — verified in browser** |
+| 4 | Best-selling Combos | **Complete — verified in browser** |
+| 5 | Bundles | **Complete — verified in browser** |
+| 6 | Reviews Rail | **Complete — verified in browser** |
+| 7 | Responsive QA | **Complete — 8 widths, no horizontal scroll** |
+| 8 | Accessibility QA | **Complete — DOM/ARIA/contrast audited, 0 findings** |
+| 9 | Performance QA | **Not started** — fonts, scene layer, backdrop-filter |
+| 10 | Final visual comparison | **Screenshots captured; reference diff outstanding** |
+| 11 | Documentation and submission | **Complete — release audit passed** |
 
 ---
 

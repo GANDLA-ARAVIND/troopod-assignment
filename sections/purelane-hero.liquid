@@ -9,7 +9,6 @@
   Every price is real Shopify data or derived from it. Nothing is typed.
 {%- endcomment -%}
 
-{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
 {{ 'purelane-hero.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'purelane-hero.js' | asset_url }}" defer="defer"></script>
@@ -169,8 +168,14 @@
                 endif
               -%}
 
+              {%- comment -%}
+                The first slide is marked active server-side. Without it every
+                slide renders at opacity 0 until the custom element boots, which
+                hides the LCP image behind JavaScript and leaves a no-JS visitor
+                with an empty stage. See DEV-024.
+              {%- endcomment -%}
               <div
-                class="pl-hero__slide pl-hero__slide--{{ count }}"
+                class="pl-hero__slide pl-hero__slide--{{ count }}{% if forloop.first %} is-on{% endif %}"
                 data-label="{{ block.settings.label | escape }}"
                 role="group"
                 aria-roledescription="slide"
