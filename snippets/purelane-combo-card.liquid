@@ -1,0 +1,182 @@
+{% comment %}
+  Renders one combo card.
+
+  Deliberately a separate snippet from purelane-product-card: a combo is not a
+  product card. It is a tray of several products plus bundle-level pricing and
+  copy. The shared card contract is not bent to fit it — instead the component
+  tiles INSIDE the tray are purelane-product-card in its `stack` variant, which
+  is exactly the reuse the design implies.
+
+  One implementation, fed by either data source (combo metaobject entries or
+  combo section blocks). The section normalises; this snippet never asks where
+  the values came from.
+
+  EVERY FIGURE IS COMPUTED (see DEV-005, DEV-018 precedent):
+  - product count comes from the component list, so it cannot contradict the
+    artwork the way the reference's "5 products / 3 tiles" card does
+  - compare-at is the sum of each component's compare_at_price, falling back to
+    its own price - the honest "bought separately" total
+  - the saving is that total minus the bundle price, and is suppressed entirely
+    when it is not positive rather than showing a zero or negative figure
+  - the includes sentence is generated from the component titles unless the
+    merchant overrides it
+
+  Accepts:
+  - title: {String} card heading. Falls back to the bundle product's title
+  - bundle_product: {Object} the buyable product. Supplies price, availability
+      and URL. When absent, the card prices itself as the component sum
+  - components: {Array} product list driving artwork, count and compare-at
+  - flag: {String} corner flag text (optional)
+  - includes_text: {String} overrides the generated includes sentence (optional)
+  - fine_print: {String} line under the price (optional)
+  - promote: {Boolean} accent border treatment (optional)
+  - cta_label: {String} button label (optional)
+  - cta_link: {String} button target. Falls back to the bundle product URL
+  - max_stack: {Number} component tiles before overflow. Default 3
+  - save_prefix: {String} tray pill wording. Default 'You save'
+  - shopify_attributes: {String} theme editor block attributes (optional)
+{% endcomment %}
+
+{%- liquid
+  assign count = components.size | default: 0
+  assign stack_limit = max_stack | default: 3
+
+  # "Bought separately" total.
+  assign sum_compare = 0
+  assign sum_price = 0
+  for item in components
+    assign item_compare = item.compare_at_price | default: item.price
+    assign sum_compare = sum_compare | plus: item_compare
+    assign sum_price = sum_price | plus: item.price
+  endfor
+
+  # Shopify owns the bundle price when a bundle product is set.
+  if bundle_product != blank
+    assign combo_price = bundle_product.price
+  else
+    assign combo_price = sum_price
+  endif
+
+  assign saved = sum_compare | minus: combo_price
+  assign has_saving = false
+  if saved > 0
+    assign has_saving = true
+  endif
+
+  if settings.currency_code_enabled
+    assign money_saved = saved | money_with_currency
+  else
+    assign money_saved = saved | money
+  endif
+
+  assign card_title = title | default: bundle_product.title
+  assign card_link = cta_link | default: bundle_product.url
+  assign overflow = count | minus: stack_limit
+
+  assign card_classes = 'pl-card pl-glass pl-combo'
+  if promote
+    assign card_classes = card_classes | append: ' pl-combo--promoted'
+  endif
+-%}
+
+<li class="pl-combo-item" {{ shopify_attributes }}>
+  <article class="{{ card_classes }}">
+    <div class="pl-combo__tray">
+      {%- if has_saving -%}
+        {%- capture save_text -%}{{ save_prefix | default: 'You save' }} {{ money_saved }}{%- endcapture -%}
+        {%- render 'purelane-badge', text: save_text, style: 'save', class: 'pl-combo__save' -%}
+      {%- endif -%}
+
+      {%- if flag != blank -%}
+        {%- render 'purelane-badge', text: flag, style: 'flag', class: 'pl-combo__flag' -%}
+      {%- endif -%}
+
+      {%- if count > 0 -%}
+        <div class="pl-combo__stack">
+          {%- for item in components limit: stack_limit -%}
+            {%- unless forloop.first -%}
+              <span class="pl-combo__plus" aria-hidden="true">+</span>
+            {%- endunless -%}
+            {%- render 'purelane-product-card', product: item, variant_style: 'stack' -%}
+          {%- endfor -%}
+
+          {%- if overflow > 0 -%}
+            <span class="pl-combo__plus" aria-hidden="true">+</span>
+            <span class="pl-combo__more">
+              <span class="pl-tile" aria-hidden="true">+{{ overflow }}</span>
+              <span>
+                {%- assign more_names = '' -%}
+                {%- for item in components offset: stack_limit -%}
+                  {%- assign more_names = more_names | append: item.title -%}
+                  {%- unless forloop.last -%}{%- assign more_names = more_names | append: ', ' -%}{%- endunless -%}
+                {%- endfor -%}
+                {{ more_names }}
+              </span>
+            </span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="pl-combo__body">
+      {%- if card_title != blank -%}
+        <h3 class="pl-combo__title">{{ card_title | escape }}</h3>
+      {%- endif -%}
+
+      {%- if count > 0 -%}
+        <div class="pl-combo__count">
+          {{ count }} {% if count == 1 %}product{% else %}products{% endif %}
+        </div>
+      {%- endif -%}
+
+      {%- if includes_text != blank -%}
+        <p class="pl-combo__includes">{{ includes_text }}</p>
+      {%- elsif count > 0 -%}
+        {%- comment -%}
+          Generated from the component list, so it can never disagree with the
+          count or the artwork.
+        {%- endcomment -%}
+        {%- assign penultimate = count | minus: 1 -%}
+        <p class="pl-combo__includes">
+          Includes:
+          {%- for item in components -%}
+            {{ ' ' }}{{ item.title | escape }}
+            {%- if forloop.last -%}
+              .
+            {%- elsif forloop.index == penultimate -%}
+              {{ ' ' }}&amp;
+            {%- else -%}
+              ,
+            {%- endif -%}
+          {%- endfor -%}
+        </p>
+      {%- endif -%}
+
+      {%- if combo_price > 0 -%}
+        {%- render 'purelane-price',
+          price: combo_price,
+          compare_at: sum_compare,
+          size: 'lg',
+          saving: 'amount'
+        -%}
+      {%- endif -%}
+
+      {%- if fine_print != blank -%}
+        <div class="pl-combo__fine">{{ fine_print }}</div>
+      {%- endif -%}
+
+      {%- if cta_label != blank and card_link != blank -%}
+        <a
+          class="pl-btn pl-btn--full {% if promote %}pl-btn--primary{% else %}pl-btn--ghost{% endif %}"
+          href="{{ card_link }}"
+        >
+          {{ cta_label }}
+          {%- if card_title != blank -%}
+            <span class="pl-sr">&mdash; {{ card_title | escape }}</span>
+          {%- endif -%}
+          {%- render 'purelane-icon', icon: 'arrow' -%}
+        </a>
+      {%- endif -%}
+    </div>
+  </article>
+</li>

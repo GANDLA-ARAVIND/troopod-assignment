@@ -1,0 +1,217 @@
+/* ==========================================================================
+   PURELANE — BEST-SELLING COMBOS
+   Reference: purelane-homepage.html
+     CSS   lines 510-546, 580-594 (mobile), 738-745 (light palette)
+     HTML  lines 1181-1193
+   The component tiles inside each tray are purelane-product-card in its
+   `stack` variant; only the tray composition lives here.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. RAIL — reference lines 511-513
+   Bleeds into the page gutter so a card can sit flush against the screen edge.
+   -------------------------------------------------------------------------- */
+.pl-comborail {
+  display: flex;
+  gap: var(--pl-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  margin: 0 calc(var(--pl-gutter) * -1);
+  padding: 4px var(--pl-gutter) 14px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  list-style: none;
+}
+
+.pl-comborail::-webkit-scrollbar {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. CARD — reference lines 514-516, 739-740
+   -------------------------------------------------------------------------- */
+.pl-combo {
+  flex: 0 0 302px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  transition: transform 0.4s var(--pl-ease);
+}
+
+.pl-combo:hover {
+  transform: translateY(var(--pl-lift));
+}
+
+.pl-combo--promoted {
+  border-color: rgba(201, 118, 29, 0.46);
+  box-shadow: 0 22px 54px rgba(58, 44, 112, 0.14), 0 0 0 1px rgba(201, 118, 29, 0.24), var(--pl-g-inset);
+}
+
+/* --------------------------------------------------------------------------
+   3. TRAY — reference lines 517-522, 741-744
+   -------------------------------------------------------------------------- */
+.pl-combo__tray {
+  padding: 14px 14px 13px;
+  border-bottom: 1px solid rgba(75, 58, 143, 0.12);
+  position: relative;
+  background: linear-gradient(162deg, rgba(255, 255, 255, 0.56), rgba(236, 230, 247, 0.34));
+}
+
+.pl-combo__save {
+  margin-bottom: 13px;
+}
+
+.pl-combo__flag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   4. STACK — reference lines 523-530
+   -------------------------------------------------------------------------- */
+.pl-combo__stack {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.pl-combo__plus {
+  flex: 0 0 9px;
+  color: var(--pl-accent);
+  font-weight: 800;
+  font-size: 12px;
+  padding-bottom: 30px;
+  text-align: center;
+}
+
+/* Overflow indicator for combos with more components than the tray shows.
+   Borrows the missing-image tile's treatment so it reads as part of the same
+   family rather than as a new element. See DEV-005. */
+.pl-combo__more {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+
+.pl-combo__more .pl-tile {
+  height: 66px;
+  width: 44px;
+  margin: 0 auto 8px;
+  font-family: var(--pl-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--pl-olive);
+}
+
+.pl-combo__more span {
+  display: block;
+  font-size: 8.6px;
+  line-height: 1.32;
+  color: var(--pl-paper-2);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   5. BODY — reference lines 531-542
+   -------------------------------------------------------------------------- */
+.pl-combo__body {
+  padding: 15px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pl-combo__title {
+  font-family: var(--pl-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  line-height: 1.1;
+  color: var(--pl-surface);
+  margin: 0;
+}
+
+.pl-combo__count {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pl-paper-3);
+  margin-top: 6px;
+}
+
+.pl-combo__includes {
+  font-size: 12.4px;
+  color: var(--pl-paper-2);
+  line-height: 1.55;
+  margin: 11px 0 14px;
+  flex: 1;
+}
+
+.pl-combo__body .pl-price {
+  gap: 9px;
+  margin-bottom: 6px;
+}
+
+.pl-combo__fine {
+  font-size: 10.4px;
+  color: var(--pl-paper-3);
+  margin-bottom: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   6. RAIL FOOTNOTES — reference lines 543-546
+   -------------------------------------------------------------------------- */
+.pl-combos__cue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pl-paper-3);
+  margin-top: 2px;
+}
+
+.pl-combos__cue svg {
+  width: 14px;
+  height: 14px;
+  color: var(--pl-accent);
+}
+
+.pl-combos__note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--pl-paper-3);
+  margin: 14px auto 0;
+  max-width: 62ch;
+}
+
+/* --------------------------------------------------------------------------
+   7. RESPONSIVE — reference lines 580-594
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .pl-combo {
+    flex: 0 0 268px;
+  }
+
+  .pl-combo__more .pl-tile {
+    height: 56px;
+    width: 38px;
+  }
+}
+
+/* Editor-only empty state. */
+.pl-combos-empty {
+  padding: 28px 18px;
+  text-align: center;
+  border-radius: var(--pl-r-media);
+  border: 1px dashed rgba(75, 58, 143, 0.26);
+  background: rgba(255, 255, 255, 0.5);
+}

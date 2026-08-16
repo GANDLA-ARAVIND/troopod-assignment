@@ -155,6 +155,30 @@ No accessibility or lifecycle safety was traded away to make autoplay work — `
 
 **Not done in Phase 3** — combos, bundles, reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section and no products are seeded, so every runtime claim is reported as unverified rather than assumed. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; the hero's three files untouched.
 
+### Phase 4 — Best-selling Combos
+
+**The judgement call: a combo is not a product card.** The obvious move was to force `purelane-product-card` to render combos too, which would have meant bending the shared contract that four sections already depend on. A combo is a *tray of several products* plus bundle-level pricing and copy — a different shape. So `purelane-combo-card.liquid` is its own snippet, and the reuse happens one level down: the component tiles inside each tray **are** `purelane-product-card` in its `stack` variant. That is the reuse the design actually implies, and it keeps the product-card contract intact.
+
+**Built**
+- `sections/purelane-combos.liquid` — 13 settings, `combo` blocks (limit 12), preset laying out the reference's three-card shape including the promoted card.
+- `snippets/purelane-combo-card.liquid` — one implementation fed by either data source. The section normalises; the snippet never asks where values came from.
+- `assets/purelane-combos.css` — rail, tray, stack, body, footnotes. Every value traced to a reference line.
+
+**Decisions worth recording**
+- **No JavaScript.** The reference rail is native `overflow-x: auto` plus CSS `scroll-snap`. Touch scrolling and momentum are free; keyboard traversal happens because each card's CTA is focusable and browsers scroll focused elements into view. A custom element would have added moving parts to reproduce behaviour the platform already provides. Recorded so the absence reads as a decision, not an omission.
+- **Metaobjects primary, blocks fallback.** The approved model is the `combo` metaobject, but that definition does not exist on the store yet. Blocks make the section usable today without inventing a different model, and metaobjects take precedence the moment the list is populated.
+- **`product_list` for components** rather than several individual product pickers — it yields a real product list from a block setting, so the block and metaobject paths hand the snippet the same shape.
+- **DEV-005 is now structurally impossible.** Count, artwork and includes-sentence all read one list, so the reference's "5 products / 3 tiles" contradiction cannot recur. Combos with more components than the tray shows get a `+N` tile that borrows the missing-image tile's treatment, with the overflow product names in adjacent text rather than hidden.
+- **A saving is never faked.** When the computed saving is not positive, the tray pill and the price chip are both omitted rather than rendering a zero or negative figure.
+
+**Mistakes caught by Theme Check**
+- `fine_print: block.settings.fine_print | default: section.settings.fine_print` — a filter applied to a `render` argument. **This is the same mistake made in Phase 1**, which is the more useful observation: the earlier fix was applied to the one occurrence rather than internalised as a rule. Filters now get assigned before any `render` call.
+- `{%- elsif forloop.index == components.size | minus: 1 -%}` — a filter inside a conditional, which Liquid silently truncates. Theme Check flagged it as a syntax error; assigned beforehand instead.
+
+**No deviation was introduced.** DEV-005's planned correction was implemented as already documented, so `docs/DEVIATIONS.md` needed no new entry — only its status will change once browser-verified.
+
+**Not done in Phase 4** — bundles, reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section; no combo metaobject definition, bundle products or component products exist on the store. Every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; hero and product-grid files untouched.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*

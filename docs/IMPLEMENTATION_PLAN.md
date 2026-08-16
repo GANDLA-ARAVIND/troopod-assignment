@@ -32,7 +32,7 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 | 1 | Foundation / design system | **Minimum foundation implemented — detailed QA pending** |
 | 2 | Hero | **Implemented; carousel defect fixed — awaiting user re-test in the storefront** |
 | 3 | Shop / Product Grid | **Implemented — not yet browser-verified** |
-| 4 | Best-selling Combos | Not started |
+| 4 | Best-selling Combos | **Implemented — not yet browser-verified** |
 | 5 | Bundles | Not started |
 | 6 | Reviews Rail | Not started |
 | 7 | Responsive QA | Not started |
@@ -263,10 +263,19 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 # Phase 4 — Best-selling Combos
 
-**Files:** `sections/purelane-combos.liquid`, `assets/purelane-section-combos.css`, `assets/purelane-rail.js`.
-**Dependencies:** Phases 1 and 3 (card in stack variant).
-**Testing:** 2 / 3 / 5-component combos; component with no image → placeholder tile; gutter bleed at 375px and 1440px; snap behaviour; keyboard and prev/next; computed savings checked against the reference's typed values.
-**Risks:** the combo data model is the largest design decision in the project; negative or zero savings; 5-item stack overflow (**DEV-005**).
+**Status: IMPLEMENTED — NOT YET BROWSER-VERIFIED.**
+
+**Files delivered:** `sections/purelane-combos.liquid`, `snippets/purelane-combo-card.liquid`, `assets/purelane-combos.css`. **No JavaScript** — the reference rail is native `overflow-x: auto` with CSS `scroll-snap`, so a script would be invention rather than reproduction.
+
+**Data source:** `combo` metaobject entries per [DATA_MODEL.md §3.2](DATA_MODEL.md), with `combo` section blocks as a fallback so the section works before the metaobject definition exists on the store. Metaobjects win when the list is populated. Both paths normalise into one snippet, which owns all the arithmetic.
+
+**Everything computed:** product count from the component list; compare-at as the sum of each component's `compare_at_price` (falling back to its price); saving as that total minus the bundle price, suppressed entirely when not positive; the includes sentence generated from component titles unless overridden. **DEV-005 is structurally impossible here** — count and artwork read the same list.
+
+**Validation done:** `shopify theme check` — **0 errors, 11 warnings, exactly the stock Dawn baseline.** All three section schemas re-parsed and valid. `purelane-combos.css` confirmed served by the running dev server.
+
+**NOT verified — needs a browser and seeded data:** rendering, rail scroll and snap, gutter bleed at 375px and 1440px, the +N overflow tile, keyboard traversal, theme editor add/remove/reorder.
+
+**Dependencies:** Phase 1 card (stack variant). Plus store data — see the combo and bundle-product requirements in [DATA_MODEL.md](DATA_MODEL.md).
 
 ---
 

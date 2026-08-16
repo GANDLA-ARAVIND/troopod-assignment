@@ -1,0 +1,288 @@
+{%- comment -%}
+  PURELANE BEST-SELLING COMBOS
+  Reference: purelane-homepage.html lines 1181-1193 (markup), 510-546 (CSS).
+
+  Data source, per docs/DATA_MODEL.md §3.2: `combo` metaobject entries, each
+  carrying a buyable bundle product plus a component product list. Combo blocks
+  are the fallback so the section is usable before the metaobject definition
+  exists on the store; metaobjects win when the list is populated.
+
+  Either way the section only normalises values and hands them to
+  snippets/purelane-combo-card.liquid, which owns all the arithmetic.
+
+  No JavaScript. The reference rail is native overflow scrolling with CSS
+  scroll-snap; adding a script would be invention, not reproduction.
+{%- endcomment -%}
+
+{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
+{{ 'purelane-combos.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign entries = section.settings.combos.value | default: section.settings.combos
+  assign combo_blocks = section.blocks | where: 'type', 'combo'
+
+  assign use_metaobjects = false
+  if entries != blank and entries.size > 0
+    assign use_metaobjects = true
+    assign combo_count = entries.size
+  else
+    assign combo_count = combo_blocks.size
+  endif
+-%}
+
+<section
+  class="pl pl-section pl-combos"
+  id="pl-combos-{{ section.id }}"
+  data-pl-section="combos"
+>
+  <purelane-reveal class="pl-wrap">
+    {%- render 'purelane-panel-head',
+      kicker: section.settings.kicker,
+      heading: section.settings.heading,
+      heading_tag: section.settings.heading_tag,
+      lede: section.settings.lede,
+      show_rule: section.settings.show_rule,
+      class: 'pl-rv'
+    -%}
+
+    {%- if combo_count > 0 -%}
+      <ul
+        class="pl-comborail pl-rv"
+        role="list"
+        aria-label="{{ section.settings.rail_label | escape }}"
+      >
+        {%- if use_metaobjects -%}
+          {%- for entry in entries -%}
+            {%- render 'purelane-combo-card',
+              title: entry.title,
+              bundle_product: entry.bundle_product.value,
+              components: entry.components.value,
+              flag: entry.flag,
+              includes_text: entry.includes_text,
+              fine_print: section.settings.fine_print,
+              promote: entry.promote,
+              cta_label: section.settings.cta_label,
+              max_stack: section.settings.max_stack,
+              save_prefix: section.settings.save_prefix
+            -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- for block in combo_blocks -%}
+            {%- assign block_fine_print = block.settings.fine_print | default: section.settings.fine_print -%}
+            {%- render 'purelane-combo-card',
+              title: block.settings.title,
+              bundle_product: block.settings.bundle_product,
+              components: block.settings.components,
+              flag: block.settings.flag,
+              includes_text: block.settings.includes_text,
+              fine_print: block_fine_print,
+              promote: block.settings.promote,
+              cta_label: section.settings.cta_label,
+              cta_link: block.settings.cta_link,
+              max_stack: section.settings.max_stack,
+              save_prefix: section.settings.save_prefix,
+              shopify_attributes: block.shopify_attributes
+            -%}
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+
+      {%- if section.settings.swipe_cue != blank -%}
+        <div class="pl-combos__cue" aria-hidden="true">
+          {%- render 'purelane-icon', icon: 'arrow' -%}
+          {{ section.settings.swipe_cue }}
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.rail_note != blank -%}
+        <p class="pl-combos__note">{{ section.settings.rail_note }}</p>
+      {%- endif -%}
+
+    {%- elsif request.design_mode -%}
+      <p class="pl-combos-empty pl-body-s">
+        Pick combo entries in Content, or add a Combo block, to show cards here.
+      </p>
+    {%- endif -%}
+  </purelane-reveal>
+</section>
+
+{% schema %}
+{
+  "name": "Purelane combos",
+  "tag": "section",
+  "class": "purelane-combos-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "kicker",
+      "label": "Kicker",
+      "default": "Pre-built to save you money"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Best selling combos"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h3", "label": "H3" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "textarea",
+      "id": "lede",
+      "label": "Description",
+      "default": "Swipe through the boxes people order most. Each one is already priced below buying the same products on their own."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rule",
+      "label": "Show divider",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Combos"
+    },
+    {
+      "type": "metaobject_list",
+      "id": "combos",
+      "metaobject_type": "combo",
+      "label": "Combos",
+      "info": "Requires the combo metaobject definition. When empty, Combo blocks are used instead."
+    },
+    {
+      "type": "range",
+      "id": "max_stack",
+      "label": "Products shown per tray",
+      "info": "Combos with more components show a +N tile after this many.",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "header",
+      "content": "Card copy"
+    },
+    {
+      "type": "text",
+      "id": "save_prefix",
+      "label": "Saving pill prefix",
+      "default": "You save"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button label",
+      "default": "Shop bundle"
+    },
+    {
+      "type": "text",
+      "id": "fine_print",
+      "label": "Fine print",
+      "default": "Inclusive of all taxes · COD available"
+    },
+    {
+      "type": "header",
+      "content": "Rail"
+    },
+    {
+      "type": "text",
+      "id": "rail_label",
+      "label": "Rail accessible name",
+      "default": "Best selling combos"
+    },
+    {
+      "type": "text",
+      "id": "swipe_cue",
+      "label": "Swipe cue",
+      "default": "Swipe for more combos"
+    },
+    {
+      "type": "textarea",
+      "id": "rail_note",
+      "label": "Note under the rail"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "combo",
+      "name": "Combo",
+      "limit": 12,
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "info": "Falls back to the bundle product's title."
+        },
+        {
+          "type": "product",
+          "id": "bundle_product",
+          "label": "Bundle product",
+          "info": "The buyable product. Its price is the combo price. Leave empty to total the component products."
+        },
+        {
+          "type": "product_list",
+          "id": "components",
+          "label": "Products included",
+          "limit": 8,
+          "info": "Drives the artwork, the product count and the saving."
+        },
+        {
+          "type": "text",
+          "id": "flag",
+          "label": "Corner flag",
+          "info": "For example: Most popular"
+        },
+        {
+          "type": "textarea",
+          "id": "includes_text",
+          "label": "Includes text",
+          "info": "Optional. Generated from the products above when empty."
+        },
+        {
+          "type": "text",
+          "id": "fine_print",
+          "label": "Fine print",
+          "info": "Overrides the section default."
+        },
+        {
+          "type": "url",
+          "id": "cta_link",
+          "label": "Button link",
+          "info": "Falls back to the bundle product's page."
+        },
+        {
+          "type": "checkbox",
+          "id": "promote",
+          "label": "Highlight this combo",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Purelane combos",
+      "blocks": [
+        { "type": "combo", "settings": { "flag": "Most popular" } },
+        { "type": "combo" },
+        { "type": "combo", "settings": { "flag": "Best value", "promote": true } }
+      ]
+    }
+  ]
+}
+{% endschema %}
