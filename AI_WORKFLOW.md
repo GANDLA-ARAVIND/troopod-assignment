@@ -179,6 +179,21 @@ No accessibility or lifecycle safety was traded away to make autoplay work — `
 
 **Not done in Phase 4** — bundles, reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section; no combo metaobject definition, bundle products or component products exist on the store. Every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; hero and product-grid files untouched.
 
+### Phase 5 — Bundles
+
+**The smallest phase so far, and deliberately so.** No new snippet, no JavaScript, 7 section settings. The tier layout is structurally unlike a product card — a tag, a giant numeral, a feature list — so its composition stays inside the section rather than being forced through the shared card contract. What *is* reused: `purelane-media` for the artwork strip (including the missing-image tile), `purelane-price` restyled at tier scale, `purelane-badge` for the tag, `purelane-icon` for the feature checks, `purelane-panel-head` for the intro panel.
+
+**Decisions worth recording**
+- **Per-unit price computed, with a rounding question the reference could not answer.** The prototype types three per-unit figures — ₹174, ₹166, ₹160 — from ₹349/2, ₹499/3 and ₹799/5. Those are 174.5, 166.33 and 159.8, so the reference floors one, rounds another, and no single rule reproduces all three. It was typed by hand. The implementation divides the real price and renders through `money`, giving the exact figure. With the reference's own prices that reads ₹174.50 / ₹166.33 / ₹159.80 rather than the three round numbers — a visible difference, logged as DEV-021, and the only defensible option once the number has to be true.
+- **Quantity is a block setting, not derived.** It is a property of the offer ("pick any three"), not of the bundle product, and Shopify section schema has no variant picker to read it from. Treating it as configuration is honest; treating it as product data would have meant inventing a convention.
+- **The promoted tier is a checkbox**, so it survives reordering. The reference hardcodes `.best` on the middle child, which breaks the moment a merchant adds a fourth tier or moves one.
+- **The highlight is never colour-only.** Its meaning normally comes from the tag text a merchant writes ("Most popular"); when a highlighted tier has no tag, a fallback line states it.
+- **Unavailable tiers say so in words** — a disabled button carrying Dawn's own `sold_out` string plus visually-hidden text naming the tier.
+
+**Clean on the first Theme Check run** — 0 errors, 11 warnings, the stock Dawn baseline. Filters were assigned before every `render` call this time, which is the rule that Phases 1 and 4 both had to learn the hard way.
+
+**Not done in Phase 5** — reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section and no bundle products exist on the store, so every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; hero, product-grid and combos files byte-identical.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*

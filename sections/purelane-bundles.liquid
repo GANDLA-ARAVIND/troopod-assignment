@@ -1,0 +1,381 @@
+{%- comment -%}
+  PURELANE BUNDLES
+  Reference: purelane-homepage.html lines 1196-1245 (markup), 387-402 and
+  572-577 (CSS).
+
+  Tiers are section blocks by design, per docs/DATA_MODEL.md §3.3: unlike
+  combos and reviews they are not reused anywhere else, there are always about
+  three of them, and their copy is exactly what a merchant edits in the theme
+  editor. No bundle metaobject.
+
+  Each tier binds to a real bundle product, so Shopify owns the price. The
+  per-unit figure is divided from that price, never typed. The promoted tier is
+  a block setting, not the middle child.
+
+  No JavaScript: the reference is a static grid with a CSS hover lift.
+{%- endcomment -%}
+
+{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
+{{ 'purelane-bundles.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign tiers = section.blocks | where: 'type', 'tier'
+-%}
+
+<section
+  class="pl pl-section pl-bundles"
+  id="pl-bundles-{{ section.id }}"
+  data-pl-section="bundles"
+>
+  <purelane-reveal class="pl-wrap">
+    {%- if section.settings.heading != blank or section.settings.kicker != blank or section.settings.lede != blank -%}
+      <div class="pl-glass pl-sec-pad pl-bundles__intro pl-rv">
+        {%- render 'purelane-panel-head',
+          kicker: section.settings.kicker,
+          heading: section.settings.heading,
+          heading_tag: section.settings.heading_tag,
+          lede: section.settings.lede,
+          show_rule: section.settings.show_rule
+        -%}
+      </div>
+    {%- endif -%}
+
+    {%- if tiers.size > 0 -%}
+      <ul class="pl-tiers" role="list" style="--pl-tier-cols: {{ section.settings.columns }};">
+        {%- for block in tiers -%}
+          {%- liquid
+            assign bundle = block.settings.product
+            assign strip = block.settings.strip_products
+            assign quantity = block.settings.quantity
+
+            # Shopify owns the price. Nothing is typed.
+            assign tier_price = bundle.price
+            assign tier_compare = bundle.compare_at_price
+
+            assign has_price = false
+            if bundle != blank and tier_price > 0
+              assign has_price = true
+            endif
+
+            # Per unit, divided from the real price. Only shown when both the
+            # price and a quantity exist - never a fabricated figure.
+            assign show_per_unit = false
+            if has_price and quantity > 0
+              assign per_unit = tier_price | divided_by: quantity
+              if settings.currency_code_enabled
+                assign money_per_unit = per_unit | money_with_currency
+              else
+                assign money_per_unit = per_unit | money
+              endif
+              assign show_per_unit = true
+            endif
+
+            assign is_available = bundle.available
+            assign cta_link = block.settings.cta_link | default: bundle.url
+
+            assign features = block.settings.features | newline_to_br | split: '<br />'
+
+            assign tier_classes = 'pl-card pl-glass pl-tier'
+            if block.settings.promote
+              assign tier_classes = tier_classes | append: ' pl-tier--promoted'
+            endif
+
+            assign strip_classes = 'pl-tierpix'
+            if strip.size >= 5
+              assign strip_classes = strip_classes | append: ' pl-tierpix--dense'
+            endif
+
+            assign stagger = forloop.index0
+            if stagger > 5
+              assign stagger = 5
+            endif
+          -%}
+
+          <li class="pl-rv{% if stagger > 0 %} pl-rv--d{{ stagger }}{% endif %}" {{ block.shopify_attributes }}>
+            <article class="{{ tier_classes }}">
+              {%- if block.settings.tag != blank -%}
+                {%- render 'purelane-badge', text: block.settings.tag, style: 'tag', class: 'pl-tier__tag' -%}
+              {%- endif -%}
+
+              {%- if strip.size > 0 -%}
+                <div class="{{ strip_classes }}">
+                  {%- for item in strip -%}
+                    {%- render 'purelane-media',
+                      image: item.featured_image,
+                      alt_fallback: item.title,
+                      decorative: true,
+                      widths: '80,120,160,240',
+                      sizes: '(max-width: 760px) 54px, 62px'
+                    -%}
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+
+              {%- if quantity > 0 -%}
+                <div class="pl-tier__qty">
+                  {{ quantity }}
+                  <small>{{ block.settings.quantity_label | default: 'Products' }}</small>
+                </div>
+              {%- endif -%}
+
+              {%- if has_price -%}
+                {%- render 'purelane-price',
+                  price: tier_price,
+                  compare_at: tier_compare,
+                  saving: 'none'
+                -%}
+
+                {%- if show_per_unit -%}
+                  <p class="pl-body-s pl-tier__per-unit">
+                    {{- block.settings.per_unit_prefix | default: 'Flat' }}
+                    {{ money_per_unit }}
+                    {{ block.settings.per_unit_suffix | default: 'per product' -}}
+                  </p>
+                {%- endif -%}
+              {%- endif -%}
+
+              {%- if features.size > 0 and block.settings.features != blank -%}
+                <ul class="pl-tier__features" role="list">
+                  {%- for feature in features -%}
+                    {%- assign line = feature | strip | strip_html -%}
+                    {%- if line != blank -%}
+                      <li>
+                        {%- render 'purelane-icon', icon: 'check' -%}
+                        <span>{{ line }}</span>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+
+              <div class="pl-tier__cta">
+                {%- if bundle != blank and is_available == false -%}
+                  {%- comment -%}
+                    Unavailable is stated in text, not signalled by styling.
+                  {%- endcomment -%}
+                  <button type="button" class="pl-btn pl-btn--ghost pl-btn--full" disabled>
+                    {{ 'products.product.sold_out' | t }}
+                    {%- if block.settings.tag != blank -%}
+                      <span class="pl-sr">&mdash; {{ block.settings.tag | escape }}</span>
+                    {%- endif -%}
+                  </button>
+                {%- elsif block.settings.cta_label != blank and cta_link != blank -%}
+                  <a
+                    class="pl-btn pl-btn--full {% if block.settings.promote %}pl-btn--primary{% else %}pl-btn--ghost{% endif %}"
+                    href="{{ cta_link }}"
+                  >
+                    {{ block.settings.cta_label }}
+                    {%- if block.settings.tag != blank -%}
+                      <span class="pl-sr">&mdash; {{ block.settings.tag | escape }}</span>
+                    {%- endif -%}
+                    {%- if block.settings.promote -%}
+                      {%- render 'purelane-icon', icon: 'arrow' -%}
+                    {%- endif -%}
+                  </a>
+                {%- endif -%}
+
+                {%- comment -%}
+                  The promoted tier's accent border is decorative. Its meaning is
+                  carried by the tag text a merchant writes ("Most popular"), so
+                  it is never colour-only. When no tag is set, state it here.
+                {%- endcomment -%}
+                {%- if block.settings.promote and block.settings.tag == blank -%}
+                  <p class="pl-tier__status">{{ section.settings.promoted_label }}</p>
+                {%- endif -%}
+              </div>
+            </article>
+          </li>
+        {%- endfor -%}
+      </ul>
+
+    {%- elsif request.design_mode -%}
+      <p class="pl-bundles-empty pl-body-s">
+        Add a Tier block and pick its bundle product to show tiers here.
+      </p>
+    {%- endif -%}
+  </purelane-reveal>
+</section>
+
+{% schema %}
+{
+  "name": "Purelane bundles",
+  "tag": "section",
+  "class": "purelane-bundles-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Intro panel"
+    },
+    {
+      "type": "text",
+      "id": "kicker",
+      "label": "Kicker",
+      "default": "Build your bundle"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "One box. Every room."
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h3", "label": "H3" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "textarea",
+      "id": "lede",
+      "label": "Description",
+      "default": "Mix and match across kitchen, laundry, home and skin. One flat price, no code needed, free shipping either way."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rule",
+      "label": "Show divider",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "text",
+      "id": "promoted_label",
+      "label": "Highlighted tier fallback text",
+      "info": "Shown only when a highlighted tier has no tag, so the highlight is never colour-only.",
+      "default": "Most popular choice"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tier",
+      "name": "Tier",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "text",
+          "id": "tag",
+          "label": "Tag",
+          "info": "For example: Starter, Most popular, Whole home.",
+          "default": "Starter"
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Bundle product",
+          "info": "Supplies the price, compare-at price, availability and link. Nothing is typed."
+        },
+        {
+          "type": "range",
+          "id": "quantity",
+          "label": "Products in this bundle",
+          "min": 1,
+          "max": 12,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "type": "text",
+          "id": "quantity_label",
+          "label": "Quantity label",
+          "default": "Products"
+        },
+        {
+          "type": "product_list",
+          "id": "strip_products",
+          "label": "Artwork strip",
+          "limit": 8,
+          "info": "Products pictured above the quantity. Five or more shrink to fit."
+        },
+        {
+          "type": "text",
+          "id": "per_unit_prefix",
+          "label": "Per-unit prefix",
+          "default": "Flat"
+        },
+        {
+          "type": "text",
+          "id": "per_unit_suffix",
+          "label": "Per-unit suffix",
+          "default": "per product"
+        },
+        {
+          "type": "textarea",
+          "id": "features",
+          "label": "Features",
+          "info": "One per line.",
+          "default": "Pick any three products\nFree shipping across India"
+        },
+        {
+          "type": "text",
+          "id": "cta_label",
+          "label": "Button label",
+          "default": "Build this box"
+        },
+        {
+          "type": "url",
+          "id": "cta_link",
+          "label": "Button link",
+          "info": "Falls back to the bundle product's page."
+        },
+        {
+          "type": "checkbox",
+          "id": "promote",
+          "label": "Highlight this tier",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Purelane bundles",
+      "blocks": [
+        {
+          "type": "tier",
+          "settings": {
+            "tag": "Starter",
+            "quantity": 2,
+            "features": "Pick any two products\nFree shipping across India"
+          }
+        },
+        {
+          "type": "tier",
+          "settings": {
+            "tag": "Most popular",
+            "quantity": 3,
+            "promote": true,
+            "features": "Pick any three products\nCovers kitchen and laundry\nFree shipping across India"
+          }
+        },
+        {
+          "type": "tier",
+          "settings": {
+            "tag": "Whole home",
+            "quantity": 5,
+            "features": "Pick any five products\nEvery room in one order\nFree shipping across India"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -44,6 +44,7 @@ This file is that record. Every meaningful difference between `reference/purelan
 | DEV-018 | Hero offer prices derived, not typed | 2 | Depends on store data | **Implemented** |
 | DEV-019 | Carousel a11y: inactive slides inert, pause on focus | 2 | No | **Implemented** |
 | DEV-020 | Purelane custom elements declared `display: block` | 2 (fix) | Yes (restores intent) | **Implemented** |
+| DEV-021 | Bundle per-unit price computed exactly, not hand-rounded | 5 | Yes (documented) | **Implemented** |
 
 ---
 
@@ -535,6 +536,34 @@ The section could not do what the reference does. No accessibility or lifecycle 
 
 ### Visual output change
 **Yes (restores intent).** The dots become visible and correctly placed, and the hero grid is constrained to its 1180px max-width as designed. Both were broken by the defect, not by the design.
+
+---
+
+## DEV-021 — Bundle per-unit price computed exactly, not hand-rounded
+
+**Area:** Bundles (`#bundles`) · **Phase:** 5 · **Status:** Implemented
+**Reference:** HTML lines 1210, 1221, 1235
+
+### Prototype behaviour
+Three typed per-unit lines:
+
+| Tier | Price | Quantity | True per unit | Prototype prints |
+|---|---|---|---|---|
+| Starter | ₹349 | 2 | 174.50 | **₹174** (floored) |
+| Most popular | ₹499 | 3 | 166.33 | **₹166** (either rule) |
+| Whole home | ₹799 | 5 | 159.80 | **₹160** (rounded up) |
+
+### Production issue
+No single rounding rule reproduces all three. The first is floored, the third is rounded, and the second is ambiguous. These were typed by hand, not calculated — which is exactly what the assignment forbids: *"Products, prices, and content come from the platform, not your Liquid."* Once a merchant changes a bundle price, every one of these numbers becomes wrong, and there is no rule to inherit because the prototype never had one.
+
+### Correction as implemented
+The per-unit figure is the bundle product's real price divided by the tier quantity, rendered through Shopify's `money` filter so it respects the store's currency format. It is shown only when both a price and a quantity exist — never as ₹0 and never estimated. Prefix and suffix ("Flat" … "per product") are block settings, so the wording stays merchant-editable.
+
+### Reason
+The number has to be true. Picking one of the reference's two conflicting rules would reproduce a hand-typed artefact and still be wrong for two of the three tiers as soon as prices change.
+
+### Visual output change
+**Yes (documented).** With the reference's own prices the line reads "Flat ₹174.50 per product" rather than "Flat ₹174 per product", and similarly ₹166.33 and ₹159.80. The type, colour, size and position of the line are unchanged. If exact-to-the-reference whole numbers are preferred over arithmetic correctness, a rounding mode could become a section setting — flagged for the Phase 7 review rather than decided unilaterally.
 
 ---
 

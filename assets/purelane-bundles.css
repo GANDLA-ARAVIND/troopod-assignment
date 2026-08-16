@@ -1,0 +1,228 @@
+/* ==========================================================================
+   PURELANE — BUNDLES
+   Reference: purelane-homepage.html
+     CSS   lines 387-402 (tiers), 572-577 (tier product row),
+           588-592 + 617 (mobile), 738-748 (light palette)
+     HTML  lines 1196-1245
+   ========================================================================== */
+
+/* Shared panel padding from the reference (line 346). Scoped here because the
+   bundles intro panel is currently its only consumer; it moves to
+   purelane-base.css when a second section needs it. */
+.pl-sec-pad {
+  padding: clamp(26px, 3.4vw, 40px);
+}
+
+@media (max-width: 760px) {
+  .pl-sec-pad {
+    padding: 22px 18px;
+  }
+}
+
+.pl-bundles__intro {
+  margin-bottom: 16px;
+}
+
+/* The intro panel's heading block carries no bottom margin: the panel's own
+   padding provides the spacing. Reference line 1199. */
+.pl-bundles__intro .pl-panel-head {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   1. TIER GRID — reference lines 388-389
+   One column, three from 760px. Kept at the reference breakpoint.
+   -------------------------------------------------------------------------- */
+.pl-tiers {
+  display: grid;
+  gap: var(--pl-gap);
+  grid-template-columns: 1fr;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 760px) {
+  .pl-tiers {
+    grid-template-columns: repeat(var(--pl-tier-cols, 3), minmax(0, 1fr));
+  }
+}
+
+.pl-tiers > li {
+  display: flex;
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   2. TIER CARD — reference lines 390-392, 739-740
+   -------------------------------------------------------------------------- */
+.pl-tier {
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  transition: transform 0.4s var(--pl-ease);
+}
+
+.pl-tier:hover {
+  transform: translateY(var(--pl-lift));
+}
+
+.pl-tier--promoted {
+  border-color: rgba(201, 118, 29, 0.46);
+  box-shadow: 0 22px 54px rgba(58, 44, 112, 0.14), 0 0 0 1px rgba(201, 118, 29, 0.24), var(--pl-g-inset);
+}
+
+.pl-tier__tag {
+  margin-bottom: 14px;
+  align-self: flex-start;
+}
+
+/* --------------------------------------------------------------------------
+   3. PRODUCT STRIP — reference lines 573-577, 746-747
+   -------------------------------------------------------------------------- */
+.pl-tierpix {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  height: 78px;
+  margin: -4px 0 16px;
+  padding: 8px 6px;
+  border-radius: var(--pl-r-media);
+  background: linear-gradient(162deg, rgba(255, 255, 255, 0.54), rgba(236, 230, 247, 0.34));
+  border: 1px solid rgba(75, 58, 143, 0.11);
+}
+
+.pl-tierpix .pl-media,
+.pl-tierpix .pl-tile {
+  height: 62px;
+  filter: drop-shadow(0 5px 8px rgba(0, 74, 66, 0.13));
+}
+
+.pl-tierpix .pl-tile {
+  width: 40px;
+  filter: none;
+}
+
+/* Five or more products step down so the row still fits the card. */
+.pl-tierpix--dense .pl-media,
+.pl-tierpix--dense .pl-tile {
+  height: 54px;
+}
+
+/* --------------------------------------------------------------------------
+   4. QUANTITY + PRICE — reference lines 395-398
+   -------------------------------------------------------------------------- */
+.pl-tier__qty {
+  font-family: var(--pl-font-display);
+  font-weight: 800;
+  font-size: 52px;
+  line-height: 0.9;
+  color: var(--pl-surface);
+  letter-spacing: -0.03em;
+}
+
+.pl-tier__qty small {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pl-paper-3);
+  display: block;
+  margin-top: 6px;
+}
+
+/* purelane-price at tier scale. The tier price is accent-coloured and the
+   compare-at sits inline after it, unlike the card price row. */
+.pl-tier .pl-price {
+  margin: 16px 0 4px;
+  gap: 8px;
+}
+
+.pl-tier .pl-price__now {
+  font-size: 27px;
+  font-weight: 700;
+  color: var(--pl-accent);
+}
+
+.pl-tier .pl-price__was {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pl-paper-3);
+}
+
+.pl-tier__per-unit {
+  font-size: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   5. FEATURES — reference lines 399-401
+   -------------------------------------------------------------------------- */
+.pl-tier__features {
+  list-style: none;
+  margin: 16px 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pl-tier__features li {
+  display: flex;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--pl-paper-2);
+}
+
+.pl-tier__features svg {
+  width: 14px;
+  height: 14px;
+  color: var(--pl-olive);
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+
+/* CTA pinned to the bottom so tiers with different feature counts still line
+   their buttons up across the row. */
+.pl-tier__cta {
+  margin-top: auto;
+}
+
+.pl-tier__status {
+  font-size: 12px;
+  color: var(--pl-paper-3);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   6. RESPONSIVE — reference lines 590-592, 617
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .pl-tier__qty {
+    font-size: 44px;
+  }
+
+  .pl-tierpix {
+    height: 70px;
+  }
+
+  .pl-tierpix .pl-media,
+  .pl-tierpix .pl-tile {
+    height: 54px;
+  }
+
+  .pl-tierpix--dense .pl-media,
+  .pl-tierpix--dense .pl-tile {
+    height: 46px;
+  }
+}
+
+/* Editor-only empty state. */
+.pl-bundles-empty {
+  padding: 28px 18px;
+  text-align: center;
+  border-radius: var(--pl-r-media);
+  border: 1px dashed rgba(75, 58, 143, 0.26);
+  background: rgba(255, 255, 255, 0.5);
+}

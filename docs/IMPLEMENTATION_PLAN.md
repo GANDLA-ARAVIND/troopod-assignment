@@ -33,7 +33,7 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 | 2 | Hero | **Implemented; carousel defect fixed — awaiting user re-test in the storefront** |
 | 3 | Shop / Product Grid | **Implemented — not yet browser-verified** |
 | 4 | Best-selling Combos | **Implemented — not yet browser-verified** |
-| 5 | Bundles | Not started |
+| 5 | Bundles | **Implemented — not yet browser-verified** |
 | 6 | Reviews Rail | Not started |
 | 7 | Responsive QA | Not started |
 | 8 | Accessibility QA | Not started |
@@ -281,10 +281,21 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 # Phase 5 — Bundles
 
-**Files:** `sections/purelane-bundles.liquid`, `assets/purelane-section-bundles.css`.
-**Dependencies:** Phases 1 and 4 (strip variant).
-**Testing:** 2 / 3 / 4 tiers; per-unit rounding; promoted tier driven by a setting rather than child position; sold-out tier; 1-col ↔ 3-col.
-**Risks:** modelling "pick any 3" in real commerce terms; per-unit rounding must never contradict the displayed total.
+**Status: IMPLEMENTED — NOT YET BROWSER-VERIFIED.**
+
+**Files delivered:** `sections/purelane-bundles.liquid`, `assets/purelane-bundles.css`. **No JavaScript** and **no new snippet** — the reference is a static grid with a CSS hover lift, and the tier composition is section-local by design.
+
+**Data model:** tiers are section blocks, per [DATA_MODEL.md §3.3](DATA_MODEL.md). No bundle metaobject. Each tier binds to a real bundle product, so Shopify owns the price, compare-at, availability and URL.
+
+**Computed, never typed:** the per-unit figure is the bundle price divided by the tier quantity, rendered through `money`. It appears only when both a price and a quantity exist. Compare-at comes from the bundle product itself and the strikethrough is omitted when absent. No saving chip — the reference tier price row does not have one.
+
+**Promoted tier is a block setting**, not the middle child, and its meaning is carried by the tag text rather than the accent border alone; a fallback line states it when a highlighted tier has no tag.
+
+**Validation done:** `shopify theme check` — **0 errors, 11 warnings, exactly the stock Dawn baseline**, clean on the first run. All four section schemas re-parsed and valid. `purelane-bundles.css` confirmed served by the dev server.
+
+**NOT verified — needs a browser and seeded products:** rendering, the 1-col ↔ 3-col switch at 760px, the artwork strip at 1 / 3 / 5 products, the dense-strip step-down, per-unit output against real prices, sold-out tier, keyboard traversal, theme editor add/remove/reorder.
+
+**Dependencies:** Phase 1 media, price, badge, icon and panel-head snippets. Plus store data — bundle products at ₹349 / ₹499 / ₹799, two of which the hero also needs.
 
 ---
 
