@@ -39,6 +39,13 @@ if (!customElements.get('purelane-hero-stage')) {
         this.pointerX = 0;
         this.pointerY = 0;
 
+        // Optimistic. The observer's job is to PAUSE the carousel once the hero
+        // scrolls away, not to grant permission to start. Gating the first play
+        // on an observer callback means any environment where that callback is
+        // late, or where the target measures as zero-area, never autoplays at
+        // all - which is exactly what happened.
+        this.visible = true;
+
         this.interval = (parseFloat(this.dataset.interval) || 3.8) * 1000;
         this.autoplayEnabled = this.dataset.autoplay !== 'false';
         this.parallaxEnabled = this.dataset.parallax !== 'false';
@@ -54,11 +61,19 @@ if (!customElements.get('purelane-hero-stage')) {
         this.pause = this.pause.bind(this);
         this.play = this.play.bind(this);
 
+        this.onBlockSelect = this.onBlockSelect.bind(this);
+        this.onBlockDeselect = this.onBlockDeselect.bind(this);
+
         this.motionQuery.addEventListener('change', this.onMotionChange);
         this.dots.forEach((dot, i) => {
           dot.addEventListener('click', () => this.onDotClick(i));
           dot.addEventListener('keydown', this.onDotKeydown);
         });
+
+        // Theme editor: clicking a slide block in the sidebar should show that
+        // slide and hold it still while the merchant edits it.
+        document.addEventListener('shopify:block:select', this.onBlockSelect);
+        document.addEventListener('shopify:block:deselect', this.onBlockDeselect);
 
         // Pause on hover AND on focus. The prototype only did hover, which
         // leaves a keyboard user unable to stop the carousel moving under them.
@@ -77,7 +92,22 @@ if (!customElements.get('purelane-hero-stage')) {
         this.stopParallax();
         this.visibility?.disconnect();
         this.motionQuery.removeEventListener('change', this.onMotionChange);
+        document.removeEventListener('shopify:block:select', this.onBlockSelect);
+        document.removeEventListener('shopify:block:deselect', this.onBlockDeselect);
         this.shadowAnimation?.cancel();
+      }
+
+      onBlockSelect(event) {
+        const slide = event.target.closest?.('.pl-hero__slide');
+        const i = this.slides.indexOf(slide);
+        if (i === -1) return;
+        this.pause();
+        this.goTo(i);
+      }
+
+      onBlockDeselect(event) {
+        if (!this.contains(event.target)) return;
+        this.play();
       }
 
       get reduced() {
@@ -146,11 +176,10 @@ if (!customElements.get('purelane-hero-stage')) {
       startVisibilityWatch() {
         this.status = this.querySelector('[data-pl-hero-status]');
 
-        if (!('IntersectionObserver' in window)) {
-          this.visible = true;
-          this.play();
-          return;
-        }
+        // Start immediately; the observer only ever pauses/resumes from here.
+        this.play();
+
+        if (!('IntersectionObserver' in window)) return;
 
         this.visibility = new IntersectionObserver(
           (entries) => {
@@ -160,7 +189,9 @@ if (!customElements.get('purelane-hero-stage')) {
               else this.pause();
             });
           },
-          { threshold: 0.2 }
+          // Any sliver on screen counts. The previous 0.2 ratio could not be
+          // met by a zero-area target and is unnecessary for a pause check.
+          { threshold: 0 }
         );
 
         this.visibility.observe(this);

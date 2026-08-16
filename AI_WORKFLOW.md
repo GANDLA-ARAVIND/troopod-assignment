@@ -108,7 +108,52 @@ The pattern used so far:
 
 **Deviations logged** — DEV-014 (temporary Google Fonts), DEV-015 (hero-local background), DEV-016 (44px dot hit area), DEV-017 (heading split), DEV-018 (derived prices), DEV-019 (carousel accessibility).
 
-**Not done in Phase 2** — the other four sections; bonus sections; the scene background; products, metafields or metaobjects; performance optimisation; the full accessibility audit; pixel QA. **No browser has rendered this section**, so items 3–8 of the phase's validation list are outstanding and are reported as such rather than assumed. No Git operations. `reference/purelane-homepage.html` untouched.
+**Not done in Phase 2** — the other four sections; bonus sections; the scene background; products, metafields or metaobjects; performance optimisation; the full accessibility audit; pixel QA. No Git operations. `reference/purelane-homepage.html` untouched.
+
+### Phase 2 (fix) — Hero carousel defect
+
+The user tested the real storefront and reported two failures: autoplay never advanced slides, and the slide indicators were neither visible nor usable. Everything else worked.
+
+**Debugging, not guessing**
+- Grepped both stylesheets for any rule targeting `purelane-hero-stage`, `purelane-reveal` or the `.pl-hero__stage-wrap` class the section applies. **None existed.**
+- Traced the positioning chain in the section markup: `.pl-hero__prod { position: absolute; bottom: 28px }` resolves against the nearest positioned ancestor, which is `.pl-hero__grid` — a class applied to `<purelane-reveal>`.
+
+**Single root cause.** Custom elements have no default display, so both custom elements were `display: inline`. An inline box ignores `width`/`max-width`/vertical margins, and a relatively positioned one whose children are all blocks is a degenerate containing block. That produced both symptoms at once: the absolutely positioned product stage resolved against a collapsed box and its dots were clipped by `.pl-hero { overflow: hidden }`, and the IntersectionObserver gating autoplay could not satisfy `threshold: 0.2` against an unmeasurable target, so `play()` returned at its guard forever. Manual dot clicks kept working because they bypass the visibility gate — which is exactly the asymmetry the user observed.
+
+**A second, independent bug found while fixing the first.** The dots' 44×44px `::before` hit areas were centred on 6px dots at a 13px pitch, overlapping roughly three neighbours each. Since later siblings paint over earlier ones, clicking dot 1 activated dot 3. Not reported by the user — they could not see the dots to click them — but it would have surfaced immediately after the first fix.
+
+**Fixes applied** — all four verified as served by the running dev server over HTTP, not merely written to disk:
+1. `purelane-reveal { display: block }` in the **foundation** stylesheet, so the four remaining sections cannot repeat the mistake.
+2. `purelane-hero-stage { display: block; position: relative }`.
+3. Dot hit areas changed from a centred 44×44 box to full row height and exactly half the gap each side — targets now touch but never overlap. The painted dot is byte-for-byte unchanged.
+4. Autoplay no longer waits on an observer callback: `this.visible` initialises `true`, `play()` is called directly, and the observer's threshold dropped to `0` with its role narrowed to pausing when the hero leaves the viewport.
+5. Added `shopify:block:select` / `shopify:block:deselect` so editing a slide in the theme editor shows and holds that slide.
+
+No accessibility or lifecycle safety was traded away to make autoplay work — `inert` slides, pause on hover and focus, roving tabindex, arrow keys and teardown on disconnect are all unchanged, and editor safety improved.
+
+**Lesson recorded.** The bug was invisible to Theme Check, to schema validation and to reading the Liquid — the markup and the JavaScript were both correct in isolation. It only existed in the interaction between an undeclared CSS default and an observer threshold. Static validation cannot substitute for rendering the page; the user's storefront test found in minutes what four clean tool runs had missed.
+
+**What the assistant still could not verify.** The hero's placement was made through the theme editor, so it lives in the remote theme's `index.json`; the local `templates/index.json` still contains only stock Dawn sections. Fetching `http://127.0.0.1:9292/` therefore returns a homepage without the hero. Local templates were deliberately left alone rather than edited to force a render, because `theme dev` would push that over the user's editor configuration. Runtime confirmation of the fix is the user's to make.
+
+### Phase 3 — Shop / Product Grid
+
+**The point of this phase was how little it needed.** Phase 1's card investment paid out: the section is roughly 200 lines of Liquid, most of it schema, plus 40 lines of CSS. Every edge case the assignment tests — sold out, no image, very long title, missing compare-at, missing rating, multi-variant — is inherited from `purelane-product-card.liquid` and was not written again. That is what "several sections render similar cards, build accordingly" was asking for, and it is the first place the claim can be checked.
+
+**Built**
+- `sections/purelane-product-grid.liquid` — 13 settings across four groups, plus optional `product` blocks (limit 24) that take precedence over the collection so a merchant can curate a specific row without editing the collection itself.
+- `assets/purelane-product-grid.css` — the shelf grid only. Columns are driven by CSS custom properties set inline from section settings, so two instances of the section on one page can use different column counts without their styles colliding.
+
+**Decisions worth recording**
+- **No JavaScript.** The reference `#shop` is a static grid whose only motion is a CSS hover lift and the shared scroll reveal. Adding a rail or any script would have been invention.
+- **The 860px breakpoint was kept, not normalised.** The reference switches to four columns at 860px. Folding that into the shared 900px step would change the layout between 860 and 899px, and identical output is the constraint. Component-specific breakpoints stay at their reference values; the comment in the CSS says so.
+- **List semantics with the card filling the cell.** `.pl-shelf > li { display: flex }` and `.pl-shelf .pl-card { flex: 1 1 auto }` make every card in a row share the tallest card's height, so their price rows and buttons line up — which is what actually keeps the long-title product from breaking the row rhythm at 375px.
+- **Dawn's `product-form.js` is loaded here**, being the first section that can render a buyable card, so add-to-cart goes through Dawn's own cart drawer and notification path rather than a parallel implementation.
+
+**Result worth noting:** Theme Check returned **11 warnings, 0 errors — exactly the stock Dawn baseline.** Every Purelane `OrphanedSnippet` warning cleared, because this section consumes the last of the Phase 1 snippets that nothing had used yet.
+
+**No deviation was introduced.** Nothing in this section departs from the reference beyond corrections already logged in Phases 1–2, so `docs/DEVIATIONS.md` was not touched.
+
+**Not done in Phase 3** — combos, bundles, reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section and no products are seeded, so every runtime claim is reported as unverified rather than assumed. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; the hero's three files untouched.
 
 ## AI Mistakes / Corrections
 

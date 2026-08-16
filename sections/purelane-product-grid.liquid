@@ -1,0 +1,271 @@
+{%- comment -%}
+  PURELANE SHOP / PRODUCT GRID
+  Reference: purelane-homepage.html lines 1248-1432 (markup), 404-421 (CSS).
+
+  The reference renders eight cards, but only four unique products — cards 5-8
+  repeat cards 1-4 with inline SVG instead of CSS backgrounds, to fill the grid.
+  Here the products come from a collection, or from hand-picked product blocks.
+
+  Every edge case — sold out, missing image, long title, missing compare-at,
+  missing rating, multi-variant — is handled once inside
+  snippets/purelane-product-card.liquid and inherited, not reimplemented.
+{%- endcomment -%}
+
+{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
+{{ 'purelane-product-grid.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
+{%- comment -%}
+  Dawn's product-form custom element powers the card's add-to-cart, including
+  the cart drawer / cart notification refresh. Loaded here because this is the
+  first section on the page that can render a buyable card.
+{%- endcomment -%}
+<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign product_blocks = section.blocks | where: 'type', 'product'
+
+  # Hand-picked blocks win over the collection, so a merchant can curate a
+  # specific row without changing the collection itself.
+  if product_blocks.size > 0
+    assign use_blocks = true
+    assign product_count = product_blocks.size
+  else
+    assign use_blocks = false
+    assign source = section.settings.collection
+    assign product_count = source.products.size
+    if product_count > section.settings.products_to_show
+      assign product_count = section.settings.products_to_show
+    endif
+  endif
+
+  assign columns = section.settings.columns_desktop | plus: 0
+-%}
+
+<section
+  class="pl pl-section pl-product-grid"
+  id="pl-shop-{{ section.id }}"
+  data-pl-section="product-grid"
+  style="--pl-shelf-cols: {{ section.settings.columns_desktop }}; --pl-shelf-cols-mobile: {{ section.settings.columns_mobile }};"
+>
+  <purelane-reveal class="pl-wrap">
+    {%- render 'purelane-panel-head',
+      kicker: section.settings.kicker,
+      heading: section.settings.heading,
+      heading_tag: section.settings.heading_tag,
+      lede: section.settings.lede,
+      show_rule: section.settings.show_rule,
+      class: 'pl-rv'
+    -%}
+
+    {%- if product_count > 0 -%}
+      <ul class="pl-shelf" role="list">
+        {%- if use_blocks -%}
+          {%- for block in product_blocks -%}
+            {%- liquid
+              assign stagger = forloop.index0 | modulo: columns
+              if stagger > 5
+                assign stagger = 5
+              endif
+            -%}
+            <li
+              class="pl-rv{% if stagger > 0 %} pl-rv--d{{ stagger }}{% endif %}"
+              {{ block.shopify_attributes }}
+            >
+              {%- render 'purelane-product-card',
+                product: block.settings.product,
+                section_id: section.id,
+                show_rating: section.settings.show_rating,
+                show_price: section.settings.show_price,
+                show_cta: section.settings.show_cta,
+                saving: section.settings.saving_style,
+                badge_text: block.settings.badge_text,
+                image_sizes: '(max-width: 760px) 120px, 160px'
+              -%}
+            </li>
+          {%- endfor -%}
+        {%- else -%}
+          {%- for product in section.settings.collection.products limit: section.settings.products_to_show -%}
+            {%- liquid
+              assign stagger = forloop.index0 | modulo: columns
+              if stagger > 5
+                assign stagger = 5
+              endif
+            -%}
+            <li class="pl-rv{% if stagger > 0 %} pl-rv--d{{ stagger }}{% endif %}">
+              {%- render 'purelane-product-card',
+                product: product,
+                section_id: section.id,
+                show_rating: section.settings.show_rating,
+                show_price: section.settings.show_price,
+                show_cta: section.settings.show_cta,
+                saving: section.settings.saving_style,
+                image_sizes: '(max-width: 760px) 120px, 160px'
+              -%}
+            </li>
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+
+    {%- elsif request.design_mode -%}
+      <div class="pl-shelf">
+        <p class="pl-shelf-empty pl-body-s">
+          {%- if use_blocks -%}
+            Pick a product in each product block to show cards here.
+          {%- else -%}
+            Choose a collection, or add product blocks, to show cards here.
+          {%- endif -%}
+        </p>
+      </div>
+    {%- endif -%}
+  </purelane-reveal>
+</section>
+
+{% schema %}
+{
+  "name": "Purelane product grid",
+  "tag": "section",
+  "class": "purelane-product-grid-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "kicker",
+      "label": "Kicker",
+      "default": "Bestsellers"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Loved by 30,000 homes"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h3", "label": "H3" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "textarea",
+      "id": "lede",
+      "label": "Description"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rule",
+      "label": "Show divider",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Ignored when this section has product blocks."
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "Products to show",
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "4"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Columns on mobile",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "header",
+      "content": "Card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show rating",
+      "info": "Reads the product's reviews.rating metafield. Hidden automatically when a product has no rating.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Show price",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cta",
+      "label": "Show add to cart",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "saving_style",
+      "label": "Saving format",
+      "options": [
+        { "value": "percent", "label": "Percentage off" },
+        { "value": "amount", "label": "Amount saved" },
+        { "value": "none", "label": "Hide" }
+      ],
+      "default": "percent"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product",
+      "name": "Product",
+      "limit": 24,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        },
+        {
+          "type": "text",
+          "id": "badge_text",
+          "label": "Badge",
+          "info": "Overrides the product's custom.badge metafield. Sold-out products always show Sold out instead."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Purelane product grid"
+    }
+  ]
+}
+{% endschema %}

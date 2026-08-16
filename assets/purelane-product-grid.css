@@ -1,0 +1,49 @@
+/* ==========================================================================
+   PURELANE — SHOP / PRODUCT GRID
+   Reference: purelane-homepage.html
+     CSS   lines 404-421 (.shelf, .card), 614-615 (mobile), 735-737 (light)
+     HTML  lines 1248-1432
+   The card itself lives in purelane-base.css §11 and is shared with the
+   combos, bundles and category sections. This file is only the shelf.
+   ========================================================================== */
+
+.pl-shelf {
+  display: grid;
+  gap: var(--pl-gap);
+  grid-template-columns: repeat(var(--pl-shelf-cols-mobile, 2), minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Reference switches to four columns at 860px. Kept at the reference value
+   rather than folded into the shared 900px breakpoint: consolidating would
+   change the layout between 860-899px, and identical output is the constraint. */
+@media (min-width: 860px) {
+  .pl-shelf {
+    grid-template-columns: repeat(var(--pl-shelf-cols, 4), minmax(0, 1fr));
+  }
+}
+
+/* The list item is the grid cell; the card fills it so that every card in a
+   row shares the tallest card's height and their price rows and buttons line
+   up. This is what keeps a very long title from breaking the row rhythm. */
+.pl-shelf > li {
+  display: flex;
+  min-width: 0;
+}
+
+.pl-shelf .pl-card {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+/* Editor-only empty state. Never rendered on the storefront. */
+.pl-shelf-empty {
+  grid-column: 1 / -1;
+  padding: 28px 18px;
+  text-align: center;
+  border-radius: var(--pl-r-media);
+  border: 1px dashed rgba(75, 58, 143, 0.26);
+  background: rgba(255, 255, 255, 0.5);
+}

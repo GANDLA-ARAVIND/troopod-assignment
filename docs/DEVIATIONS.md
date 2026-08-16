@@ -43,6 +43,7 @@ This file is that record. Every meaningful difference between `reference/purelan
 | DEV-017 | Hero heading split into two settings | 2 | No | **Implemented** |
 | DEV-018 | Hero offer prices derived, not typed | 2 | Depends on store data | **Implemented** |
 | DEV-019 | Carousel a11y: inactive slides inert, pause on focus | 2 | No | **Implemented** |
+| DEV-020 | Purelane custom elements declared `display: block` | 2 (fix) | Yes (restores intent) | **Implemented** |
 
 ---
 
@@ -504,6 +505,36 @@ Required by the accessibility baseline. None of it is visible.
 
 ### Visual output change
 **No.**
+
+---
+
+## DEV-020 — Purelane custom elements declared `display: block`
+
+**Area:** Foundation + Hero · **Phase:** 2 (defect fix) · **Status:** Implemented
+**Not a prototype deviation** — a defect in our own Phase 1/2 code, recorded here because it changed rendered output.
+
+### The defect
+`<purelane-reveal>` and `<purelane-hero-stage>` had no `display` declaration anywhere. Custom elements have no default display, so both resolved to **`display: inline`**.
+
+Two consequences, both reported from the storefront:
+
+1. **Autoplay never started.** `<purelane-hero-stage>` was the IntersectionObserver target. An inline element whose children are all block-level has a degenerate box, so the observer could not satisfy `threshold: 0.2`, `this.visible` stayed false, and `play()` returned at its guard every time. The timer was never created. Manual dot clicks still worked because they bypass the visibility gate.
+2. **Slide indicators were not visible or usable.** `.pl-hero__grid` — `max-width: 1180px; width: 100%; margin: 0 auto; position: relative` — was applied to the inline `<purelane-reveal>`. Inline boxes ignore width, max-width and vertical margins, and a relatively positioned inline box is a degenerate containing block. `.pl-hero__prod { position: absolute; bottom: 28px }` therefore resolved against a collapsed box instead of the grid, putting the stage and the dots below it outside the intended area, where `.pl-hero { overflow: hidden }` clipped them.
+
+A third, separately real bug in the same area: the dots' 44×44px `::before` hit areas were centred on 6px dots at a 13px pitch, so each overlapped roughly three neighbours. Because later siblings paint over earlier ones, **clicking dot 1 activated dot 3**.
+
+### Correction as implemented
+- `purelane-reveal { display: block }` in `purelane-base.css`, with a comment explaining why every Purelane custom element must declare it. This is foundation-level, so the four remaining sections cannot repeat the mistake.
+- `purelane-hero-stage { display: block; position: relative }` in `purelane-hero.css`.
+- Dot hit areas changed from a centred 44×44 box to `left: -3.5px; right: -3.5px; height: 44px` — full row height, exactly half the gap each side. Targets now touch but never overlap. **The painted dot is untouched**: still 6px, still 20px when active, same colours, same 0.4s morph.
+- `this.visible` now initialises to `true`, and `startVisibilityWatch()` calls `play()` directly. The observer's role is narrowed to *pausing* when the hero leaves the viewport, and its threshold dropped from `0.2` to `0` — a ratio gate was never needed for a pause check and was the thing an unmeasurable target could not satisfy. Autoplay no longer depends on an observer callback arriving.
+- Added `shopify:block:select` / `shopify:block:deselect` handling so selecting a slide in the theme editor shows that slide and holds it still while it is edited.
+
+### Reason
+The section could not do what the reference does. No accessibility or lifecycle safety was removed to achieve it — `inert` on inactive slides, pause on hover and focus, roving tabindex, arrow keys and full teardown on disconnect are all unchanged, and editor safety improved.
+
+### Visual output change
+**Yes (restores intent).** The dots become visible and correctly placed, and the hero grid is constrained to its 1180px max-width as designed. Both were broken by the defect, not by the design.
 
 ---
 

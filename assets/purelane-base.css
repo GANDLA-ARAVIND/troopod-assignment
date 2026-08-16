@@ -765,6 +765,16 @@
    custom element has connected and marked itself ready, which means no-JS and
    error paths render fully visible content. See DEV-011.
    -------------------------------------------------------------------------- */
+/* Custom elements have no default display, so an unstyled one is display:inline.
+   An inline box ignores width/max-width/vertical padding, and when it carries
+   position:relative its box is degenerate - which silently breaks any
+   absolutely positioned descendant that expects it as a containing block, and
+   gives IntersectionObserver a zero-area target. Every Purelane custom element
+   is declared block here so that can never happen again. See DEV-020. */
+purelane-reveal {
+  display: block;
+}
+
 purelane-reveal[data-pl-ready] .pl-rv {
   opacity: 0;
   transform: translateY(30px);

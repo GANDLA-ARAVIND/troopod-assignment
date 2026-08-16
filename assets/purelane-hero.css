@@ -191,6 +191,13 @@
   z-index: 2;
 }
 
+/* Must be block: as an inline element its rect is degenerate, which starves
+   the IntersectionObserver that gates autoplay. See DEV-020. */
+purelane-hero-stage {
+  display: block;
+  position: relative;
+}
+
 .pl-hero__stage {
   position: relative;
   width: 100%;
@@ -388,14 +395,19 @@
   position: relative;
 }
 
+/* Hit area, not paint. A 44x44 box centred on each 6px dot overlapped its
+   neighbours (6px dot + 7px gap = 13px pitch), and because later dots paint
+   over earlier ones, clicking dot 1 activated dot 3. This instead stretches
+   each dot's target to the full row height and exactly half the gap on each
+   side, so targets touch but never overlap. */
 .pl-hero__dot::before {
   content: '';
   position: absolute;
   top: 50%;
-  left: 50%;
-  width: 44px;
+  left: -3.5px;
+  right: -3.5px;
   height: 44px;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
 }
 
 .pl-hero__dot:hover {

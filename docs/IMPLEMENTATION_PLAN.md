@@ -30,8 +30,8 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 |---|---|---|
 | 0 | Shopify / Dawn setup | **In progress** — Dawn pulled ✅; store seeding + Git baseline outstanding |
 | 1 | Foundation / design system | **Minimum foundation implemented — detailed QA pending** |
-| 2 | Hero | **Implemented — static validation passed; runtime validation pending store push** |
-| 3 | Shop / Product Grid | Not started |
+| 2 | Hero | **Implemented; carousel defect fixed — awaiting user re-test in the storefront** |
+| 3 | Shop / Product Grid | **Implemented — not yet browser-verified** |
 | 4 | Best-selling Combos | Not started |
 | 5 | Bundles | Not started |
 | 6 | Reviews Rail | Not started |
@@ -227,9 +227,15 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 **Architecture:** slides are `slide` blocks (limit 8) and promises are `badge` blocks (limit 4), so both are add/remove/reorder-able. Each slide holds up to three product pickers plus an optional **offer product** whose price becomes the headline figure; compare-at and saving are derived, never typed (DEV-018). Behaviour lives in `<purelane-hero-stage>`, a custom element whose `connectedCallback`/`disconnectedCallback` make it survive theme-editor re-renders.
 
-**Validation done:** `shopify theme check` — 0 errors, 15 warnings (11 stock Dawn + 4 not-yet-consumed Purelane snippets). Schema JSON parsed and asserted valid.
+### Validation status
 
-**Validation NOT done — requires pushing to the store:** section selectable in the theme editor; renders on the homepage; add/remove/reorder blocks; widths 375–1440; keyboard interaction; reduced motion. No browser has rendered this section.
+**Confirmed by the user in the storefront (`http://127.0.0.1:9292`):** desktop hero renders; manual slide switching works; mobile page scrolling is correct; theme editor integration works.
+
+**Defect found by the user and fixed:** autoplay did not run and the slide indicators were neither visible nor usable. Root cause was a single one: `<purelane-reveal>` and `<purelane-hero-stage>` had no `display` declaration, so both were `display: inline`. Full analysis in [DEVIATIONS.md → DEV-020](DEVIATIONS.md).
+
+**Confirmed by the assistant:** `shopify theme check` — 0 errors, 15 warnings, unchanged from before the fix. Schema JSON valid. All four fixed files verified as served by the running dev server over HTTP. The Google Fonts link (DEV-014) confirmed present in the served HTML.
+
+**Still NOT confirmed — requires the user's browser:** that autoplay now advances slides; that indicators are visible and clickable; keyboard interaction; reduced motion; widths 375–1440; theme editor lifecycle after the fix. The assistant cannot reproduce the user's view, because the hero's placement was made through the theme editor and lives in the **remote** theme's `index.json` — the local `templates/index.json` still holds only stock Dawn sections, so the dev server renders the homepage without the hero when fetched directly. Local templates were deliberately not edited, as that would risk overwriting the user's editor configuration.
 
 **Dependencies:** Phase 1. Plus store data — see [DATA_MODEL.md §5a](DATA_MODEL.md): without seeded products the stage renders placeholder tiles and prices fall back to component sums.
 
@@ -239,10 +245,19 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 # Phase 3 — Shop / Product Grid
 
-**Files:** `sections/purelane-product-grid.liquid`, `assets/purelane-section-grid.css`, add-to-cart wiring.
-**Dependencies:** Phase 1 card snippet.
-**Testing:** all four required test products visible in one grid; 2-up at 375px; 4-up at 860px+; empty / short / oversized collections; real add-to-cart including a multi-variant product; keyboard traversal.
-**Risks:** card height parity with the very long title; add-to-cart integration with Dawn's cart; **the desktop artwork sizing correction (DEV-001) lands here.**
+**Status: IMPLEMENTED — NOT YET BROWSER-VERIFIED.**
+
+**Files delivered:** `sections/purelane-product-grid.liquid`, `assets/purelane-product-grid.css`. No new JavaScript — the reference `#shop` is a static grid with a CSS hover lift, so none is warranted.
+
+**Architecture:** the section is deliberately thin. Products come from a collection picker, or from hand-picked `product` blocks which take precedence. Each product is rendered by `snippets/purelane-product-card.liquid` in its `grid` variant, so all six edge cases — sold out, missing image, long title, missing compare-at, missing rating, multi-variant — are inherited rather than reimplemented. The CSS is 40 lines: the shelf grid and the row-height rule that keeps cards aligned.
+
+**DEV-001 is satisfied here.** The desktop artwork sizing correction lives in `purelane-base.css` §11 and needed no grid-specific work.
+
+**Validation done:** `shopify theme check` — **0 errors, 11 warnings, exactly the stock Dawn baseline.** Every Purelane `OrphanedSnippet` warning cleared, because this section consumes the last of the Phase 1 snippets. Schema JSON parsed and asserted valid. `purelane-product-grid.css` confirmed served by the running dev server.
+
+**NOT verified — needs a browser and seeded products:** rendering, the 2-up ↔ 4-up switch at 860px, card height parity with the long-title product, sold-out and no-image cards, real add-to-cart against Dawn's cart drawer, keyboard traversal, theme editor add/remove/reorder.
+
+**Dependencies:** Phase 1 card. Plus store data — the section renders an editor-only empty state and nothing on the storefront until a collection is chosen.
 
 ---
 
