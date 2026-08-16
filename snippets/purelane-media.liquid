@@ -15,6 +15,8 @@
   - alt: {String} explicit alt text. Defaults to the image's own alt, then to
       the product title passed as alt_fallback (optional)
   - alt_fallback: {String} used when the image has no alt set (optional)
+  - widths: {String} comma-separated srcset widths. Default '120,180,240,360,480'
+      (card scale). The hero passes a larger ladder for its full-size artwork.
   - sizes: {String} sizes attribute. Default '(max-width: 760px) 108px, 122px'
   - loading: {String} 'lazy' (default) or 'eager'
   - fetchpriority: {String} 'high' when this is an LCP candidate (optional)
@@ -26,6 +28,7 @@
 {% endcomment %}
 
 {%- liquid
+  assign width_list = widths | default: '120,180,240,360,480' | split: ','
   assign img_sizes = sizes | default: '(max-width: 760px) 108px, 122px'
   assign img_loading = loading | default: 'lazy'
   assign extra_class = class | default: ''
@@ -38,9 +41,18 @@
 -%}
 
 {%- if image != blank -%}
+  {%- capture img_srcset -%}
+    {%- for w in width_list -%}
+      {%- assign w_num = w | plus: 0 -%}
+      {%- if image.width >= w_num -%}
+        {{ image | image_url: width: w_num }} {{ w_num }}w,
+      {%- endif -%}
+    {%- endfor -%}
+    {{ image | image_url }} {{ image.width }}w
+  {%- endcapture -%}
   <img
-    src="{{ image | image_url: width: 240 }}"
-    srcset="{{ image | image_url: width: 120 }} 120w, {{ image | image_url: width: 180 }} 180w, {{ image | image_url: width: 240 }} 240w, {{ image | image_url: width: 360 }} 360w, {{ image | image_url: width: 480 }} 480w"
+    src="{{ image | image_url: width: 480 }}"
+    srcset="{{ img_srcset }}"
     sizes="{{ img_sizes }}"
     alt="{{ img_alt | escape }}"
     width="{{ image.width }}"

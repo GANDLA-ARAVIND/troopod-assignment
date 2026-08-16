@@ -30,7 +30,7 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 |---|---|---|
 | 0 | Shopify / Dawn setup | **In progress** — Dawn pulled ✅; store seeding + Git baseline outstanding |
 | 1 | Foundation / design system | **Minimum foundation implemented — detailed QA pending** |
-| 2 | Hero | Not started |
+| 2 | Hero | **Implemented — static validation passed; runtime validation pending store push** |
 | 3 | Shop / Product Grid | Not started |
 | 4 | Best-selling Combos | Not started |
 | 5 | Bundles | Not started |
@@ -221,10 +221,19 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 # Phase 2 — Hero
 
-**Files:** `sections/purelane-hero.liquid`, `assets/purelane-section-hero.css`, `assets/purelane-carousel.js`.
-**Dependencies:** Phase 1 (card, price, media, motion).
-**Testing:** 375 / 768 / 1024 / 1440 against the reference; 1, 2 and 3 slides; sold-out and no-image slide products; keyboard through the dots; reduced motion; LCP measurement; add / remove / reorder in the theme editor.
-**Risks:** height-driven stage sizing with real images of varying aspect ratios; parallax surviving editor re-render; LCP regression from the carousel.
+**Status: implemented — static validation passed; runtime validation pending a store push.**
+
+**Files delivered:** `sections/purelane-hero.liquid`, `assets/purelane-hero.css`, `assets/purelane-hero.js`. Phase 1 snippets extended: `purelane-media.liquid` (configurable srcset ladder for hero-scale artwork), `purelane-icon.liquid` (shield, no-chem, drop).
+
+**Architecture:** slides are `slide` blocks (limit 8) and promises are `badge` blocks (limit 4), so both are add/remove/reorder-able. Each slide holds up to three product pickers plus an optional **offer product** whose price becomes the headline figure; compare-at and saving are derived, never typed (DEV-018). Behaviour lives in `<purelane-hero-stage>`, a custom element whose `connectedCallback`/`disconnectedCallback` make it survive theme-editor re-renders.
+
+**Validation done:** `shopify theme check` — 0 errors, 15 warnings (11 stock Dawn + 4 not-yet-consumed Purelane snippets). Schema JSON parsed and asserted valid.
+
+**Validation NOT done — requires pushing to the store:** section selectable in the theme editor; renders on the homepage; add/remove/reorder blocks; widths 375–1440; keyboard interaction; reduced motion. No browser has rendered this section.
+
+**Dependencies:** Phase 1. Plus store data — see [DATA_MODEL.md §5a](DATA_MODEL.md): without seeded products the stage renders placeholder tiles and prices fall back to component sums.
+
+**Known integration issue:** the reference header is `position: fixed` and floats over the hero, which is what the hero's `padding-top: 150px` accounts for. Dawn's header is in a section group and occupies real layout space, so a full-viewport hero currently extends below the fold by roughly the header height. Options are a `section_height` change (already a setting), an overlay header, or a negative offset — deferred to Phase 7, when the header treatment is decided against real screenshots.
 
 ---
 

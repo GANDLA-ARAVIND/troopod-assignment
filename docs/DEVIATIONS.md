@@ -37,6 +37,12 @@ This file is that record. Every meaningful difference between `reference/purelan
 | DEV-011 | Reveal hidden state gated behind JS readiness | 1 | No | **Implemented** |
 | DEV-012 | Purelane microcopy as snippet defaults, not locale keys | 1 | No | **Implemented** |
 | DEV-013 | Product artwork as `<img>`, not CSS background | 1 | No | **Implemented** |
+| DEV-014 | Google Fonts loaded temporarily for Outfit + Inter | 1.5 | No | **Implemented** |
+| DEV-015 | Hero paints its own background until the scene layer exists | 2 | No (interim) | **Implemented** |
+| DEV-016 | Carousel dot hit area expanded to 44px | 2 | No | **Implemented** |
+| DEV-017 | Hero heading split into two settings | 2 | No | **Implemented** |
+| DEV-018 | Hero offer prices derived, not typed | 2 | Depends on store data | **Implemented** |
+| DEV-019 | Carousel a11y: inactive slides inert, pause on focus | 2 | No | **Implemented** |
 
 ---
 
@@ -356,6 +362,148 @@ Required by "products, prices, and content come from the platform", and by the p
 
 ### Visual output change
 **No.** Same artwork, same fit, same anchor point — different delivery.
+
+---
+
+## DEV-014 — Google Fonts loaded temporarily for Outfit + Inter
+
+**Area:** `layout/theme.liquid` · **Phase:** 1.5 (between foundation and hero) · **Status:** Implemented — **temporary, Phase 9 removes it**
+**Reference:** line 11
+
+### Prototype behaviour
+`<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">` preceded by two preconnects.
+
+### Production issue
+Shopify's font library carries neither Outfit nor Inter, so `settings.type_header_font` / `type_body_font` and Dawn's `font_face` pipeline cannot supply them. Without a webfont, every section built in Phases 2–7 renders in a fallback stack and visual comparison against the reference is meaningless.
+
+### Correction as implemented
+The reference's font loading is reproduced **verbatim** in `layout/theme.liquid` — same two families, same weights, same `display=swap`, same preconnect pair, byte-identical URL (verified by diff against reference line 11). Three `RemoteAsset` Theme Check warnings are suppressed with a scoped `theme-check-disable`/`enable` pair so that genuinely new warnings stay visible in later phases; the suppression carries its justification inline.
+
+### Reason
+Approved as an explicit interim decision: accurate visual comparison now, performance correction later. The costs are known and written into the file — a render-blocking third-party stylesheet, two extra DNS/TLS handshakes, and no control over subsetting or cache policy.
+
+### Phase 9 replacement
+Self-hosted, subset, preloaded `woff2` served from the theme's own assets, with metric-adjusted fallbacks to limit swap shift. The `theme.liquid` block is deleted at that point.
+
+### Visual output change
+**No.** This is what makes the visual output match.
+
+**Known fidelity note:** the Purelane CSS sets `font-weight: 800` on badges, which are set in Inter — but the reference only loads Inter to 700, so those render at the nearest available weight. Reproducing the reference's exact weight set reproduces this too. Not a defect.
+
+---
+
+## DEV-015 — Hero paints its own background until the scene layer exists
+
+**Area:** Hero · **Phase:** 2 · **Status:** Implemented — **interim**
+**Reference:** CSS lines 64-70, 660-664; HTML lines 826-831
+
+### Prototype behaviour
+The page has a fixed, full-viewport `.scenes` stack behind everything: four gradient scenes cross-fading on scroll, four animated water layers and 16 bubbles. The hero is transparent and sits over scene 1, `linear-gradient(178deg,#fbfffb,#eafaec 24%,#d6f1dc 54%,#bfe8ca 100%)`.
+
+### Production issue
+The scene layer is a page-level component shared by all five sections, and it is the single largest performance item in the file (three full-viewport animated `feTurbulence`/`feDisplacementMap` filters). It is deliberately not built in Phase 2. But a transparent hero over Dawn's white body does not resemble the design at all and cannot be visually reviewed.
+
+### Correction as implemented
+The hero renders its own `.pl-hero__bg` carrying **scene 1's exact gradient**, behind its scrim, controlled by a `show_local_background` section setting (default on) whose help text states it is temporary.
+
+### Reason
+Makes the section evaluable standalone without pre-empting the shared background's architecture. When the scene layer is built, the setting is switched off — or the element is removed — and the hero becomes transparent as designed.
+
+### Visual output change
+**No (interim).** The hero shows the same gradient the reference shows behind it. What is missing is the water, bubbles and scroll-driven scene transitions — all deferred, none owned by this section.
+
+---
+
+## DEV-016 — Carousel dot hit area expanded to 44px
+
+**Area:** Hero · **Phase:** 2 · **Status:** Implemented
+**Reference:** CSS lines 322-326
+
+### Prototype behaviour
+`.hdots button { width: 6px; height: 6px }` — a 6×6px pointer target, growing to 20×6px when active.
+
+### Production issue
+A 6px target fails every touch-target guideline and is genuinely hard to hit on a phone, which is where this carousel is most used. WCAG 2.5.8 asks for 24×24px minimum; 44×44px is the common practical floor.
+
+### Correction as implemented
+The painted dot keeps its exact reference dimensions (6px, 20px active, same colours, same 0.4s morph). A transparent `::before` pseudo-element centred on it extends the *hit area* to 44×44px.
+
+### Reason
+The visual design is preserved precisely; only the invisible interactive region changes.
+
+### Visual output change
+**No.** Nothing painted changes. The dots simply become usable.
+
+---
+
+## DEV-017 — Hero heading split into two settings
+
+**Area:** Hero · **Phase:** 2 · **Status:** Implemented
+**Reference:** HTML line 964 — `<h1 class="d1 rv in">Clean<br>That<br><span class="lime">Lasts</span></h1>`
+
+### Prototype behaviour
+The headline's line breaks and its accent word are baked into the markup, with the third line wrapped in `.lime`.
+
+### Production issue
+"Nothing hardcoded that a marketing team would want to change" — the headline is the single most-edited element on any homepage. Shopify's `richtext` setting permits only `<p> <strong> <em> <a> <br>`, so a `<span class>` cannot survive it, and an `html` setting would require a marketer to write markup.
+
+### Correction as implemented
+Two settings: `heading` (textarea, one headline line per line break) and `heading_accent` (single line, appended last and wrapped in `.pl-accent-text`). Defaults reproduce the reference exactly — `Clean\nThat` plus `Lasts`. A `heading_tag` setting picks H1 or H2 so a second hero, or a page that already has an H1, does not produce a broken outline.
+
+### Reason
+Merchant-editability with no HTML knowledge, identical rendered result.
+
+### Visual output change
+**No.** Renders character-for-character as the reference at default settings.
+
+---
+
+## DEV-018 — Hero offer prices derived, not typed
+
+**Area:** Hero · **Phase:** 2 · **Status:** Implemented
+**Reference:** HTML line 994
+
+### Prototype behaviour
+Three price tags with every figure typed as a literal: "Single bottle ₹200 / ~~₹299~~ / 33% off", "Any 2 products ₹349 / ~~₹598~~ / Save ₹249", "Any 3 products ₹499 / ~~₹897~~ / Save ₹398".
+
+### Production issue
+None of it is connected to anything. ₹598 is two products' compare-at prices added by hand; ₹249 is a subtraction done by hand. Any price change on the store leaves the hero lying.
+
+### Correction as implemented
+Per slide:
+- **Compare-at** = the sum of each shown product's `compare_at_price`, falling back to its `price` where no compare-at exists. This is the honest "bought separately" total.
+- **Price** = the optional **offer product**'s `price` — a real bundle product, so Shopify owns the number — or, when no offer product is set, the sum of the shown products' prices.
+- **Saving** = computed by `purelane-price`, as a percentage or an amount, per a block setting.
+- If the computed compare-at is not greater than the price, the strikethrough and the saving chip are both omitted rather than showing a zero or negative saving.
+
+### Reason
+Directly required: "Products, prices, and content come from the platform, not your Liquid."
+
+### Visual output change
+**Depends on store data.** With products priced as the reference implies (₹200/₹299 each) and bundle products at ₹349 and ₹499, the tags render exactly as the reference. With different seeded prices the numbers differ — correctly. The layout, type and treatment are unchanged.
+
+---
+
+## DEV-019 — Carousel accessibility: inert slides, pause on focus
+
+**Area:** Hero · **Phase:** 2 · **Status:** Implemented
+**Reference:** HTML line 994; JS lines 1659-1682
+
+### Prototype behaviour
+Inactive slides are `opacity: 0; pointer-events: none` but remain fully in the accessibility tree — so all three price tags and all six product names are announced at once, as if they were competing simultaneous offers. Dots are unlabelled beyond "Show 2 products" and carry no state. Autoplay pauses on `mouseenter` only.
+
+### Correction as implemented
+- Inactive slides get `inert` **and** `aria-hidden="true"`, so only the visible offer is announced.
+- Each slide is a `role="group"` with `aria-roledescription="slide"` and a positional label; the stage is a `role="region"` with `aria-roledescription="carousel"` and a merchant-set accessible name.
+- Dots carry `aria-current` and roving `tabindex`, respond to arrow keys, and announce position and offer label.
+- Autoplay pauses on **`focusin` as well as `mouseenter`** — the prototype left a keyboard user unable to stop the carousel moving under them.
+- A polite `role="status"` region announces the offer on manual navigation only, staying silent during autoplay.
+
+### Reason
+Required by the accessibility baseline. None of it is visible.
+
+### Visual output change
+**No.**
 
 ---
 

@@ -80,6 +80,36 @@ The pattern used so far:
 
 **Not done in Phase 1** — no sections (hero, grid, combos, bundles, reviews); no products, metafields or metaobjects created remotely; no scene background; no `purelane-motion.js`; no `config/settings_schema.json` changes; no webfont loaded; no Git operations; `reference/purelane-homepage.html` untouched; nothing rendered in a browser, so no visual verification has taken place.
 
+### Phase 1.5 — Temporary webfont loading
+
+- Added the reference's Google Fonts loading to `layout/theme.liquid` — the first Dawn file this project modifies. Verified byte-identical to reference line 11 by diffing the extracted URLs.
+- Three `RemoteAsset` warnings were suppressed with a scoped `theme-check-disable`/`enable` pair, justified inline. The first attempt put the directive inside a `{%- comment -%}` block, which Theme Check does not parse — caught by re-running the check.
+- Logged as DEV-014, explicitly temporary, with the Phase 9 replacement written into the file.
+
+### Phase 2 — Hero
+
+**Read before building**
+- Re-read the hero's CSS (reference lines 206–248, 283–332), the light-palette overrides (690–706), the markup (945–997 plus the single-line stage on 994) and the behaviour (1613–1682) before writing any code.
+
+**Built**
+- `sections/purelane-hero.liquid` — 18 settings across 5 groups, `slide` blocks (limit 8) and `badge` blocks (limit 4), with a preset that lays out the reference's three slides and three promises.
+- `assets/purelane-hero.css` — nine numbered sections, every value traced to a reference line in a comment.
+- `assets/purelane-hero.js` — `<purelane-hero-stage>`: carousel, dot controls with roving tabindex and arrow keys, IntersectionObserver-gated autoplay, scroll and pointer parallax, WAAPI shadow breathe, live reduced-motion handling, full teardown on disconnect.
+- Extended two Phase 1 snippets: `purelane-media` gained a configurable srcset ladder (the card's 120–480w is too small for hero artwork) and now skips widths larger than the source image; `purelane-icon` gained shield, no-chem and drop for the promise badges.
+
+**Decisions worth recording**
+- **Slides as blocks, not a fixed three.** The prototype hardcodes three; a merchant can now run one or eight.
+- **Offer product over a manual price field.** Slide 2's "₹349" is a real bundle price, so it belongs to a real product that Shopify prices. A manual number would have been faster and would have reintroduced exactly the hardcoding the brief forbids. Falls back to summing the shown products when no offer product is set, so the section degrades honestly rather than showing nothing.
+- **Heading split into two settings** rather than an `html` setting — a marketer should not have to write `<span>` to colour the last word.
+- The hero paints scene 1's gradient itself because the shared scene layer is deliberately not built yet (DEV-015).
+
+**Mistake caught in this phase**
+- Scratch scaffolding was left inside the slide loop while working out the price derivation — a stray `for` over a non-existent setting, an empty `capture`, and a `for … break` no-op. Spotted on read-back before running Theme Check and removed. It would not have errored, which is precisely why it needed catching by review rather than by tooling.
+
+**Deviations logged** — DEV-014 (temporary Google Fonts), DEV-015 (hero-local background), DEV-016 (44px dot hit area), DEV-017 (heading split), DEV-018 (derived prices), DEV-019 (carousel accessibility).
+
+**Not done in Phase 2** — the other four sections; bonus sections; the scene background; products, metafields or metaobjects; performance optimisation; the full accessibility audit; pixel QA. **No browser has rendered this section**, so items 3–8 of the phase's validation list are outstanding and are reported as such rather than assumed. No Git operations. `reference/purelane-homepage.html` untouched.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*

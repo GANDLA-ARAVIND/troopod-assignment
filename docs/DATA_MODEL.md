@@ -187,6 +187,27 @@ Products 6, 7 and 8 are the three required test cases. Every card variant must b
 
 ---
 
+## 5a. Data dependencies opened by Phase 2 (Hero)
+
+The hero is built and renders, but it cannot show its intended figures until the store has data. Nothing below has been created.
+
+| Dependency | Needed for | Behaviour until it exists |
+|---|---|---|
+| **≥ 3 products with `compare_at_price` set** | The hero's strikethrough and saving chip | Price renders with no strikethrough and no saving chip. Layout is unaffected. |
+| **Product images** | The bottle artwork on each slide | The dashed leaf tile renders at bottle scale, preserving the stage composition. |
+| **Bundle products** — "Any 2 products", "Any 3 products" | The `offer_product` on slides 2 and 3, so the ₹349 / ₹499 headline prices come from Shopify | Falls back to the sum of the slide's products, which is a correct but different number (e.g. ₹400 rather than ₹349). |
+
+**Bundle products required.** Two simple products, no variants, priced at the offer price, with no compare-at of their own (the hero derives compare-at from the component products):
+
+| Title | Price | Purpose |
+|---|---|---|
+| Any 2 Products Bundle | 349 | Hero slide 2 `offer_product`; later reused by the bundles section |
+| Any 3 Products Bundle | 499 | Hero slide 3 `offer_product`; later reused by the bundles section |
+
+These are the same tier products Phase 5 needs, so creating them now serves both. Add a third, **Any 5 Products Bundle** at 799, when Phase 5 starts.
+
+---
+
 ## 6. What this model deliberately avoids
 
 - **No metafield for anything computable.** Savings, discount percentages, per-unit prices and product counts are derived in Liquid. A merchant cannot make them contradict the prices.

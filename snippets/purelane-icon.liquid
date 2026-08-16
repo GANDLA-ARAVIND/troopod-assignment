@@ -8,7 +8,7 @@
   Meaning is always carried by adjacent text, never by the glyph.
 
   Accepts:
-  - icon: {String} leaf | arrow | check | star | plus  (required)
+  - icon: {String} leaf | arrow | check | star | plus | shield | no-chem | drop  (required)
   - size: {Number} px, applied to width and height (optional)
 
   Usage:
@@ -45,5 +45,19 @@
   {%- when 'plus' -%}
     <svg viewBox="0 0 24 24" {{ stroke_common }} stroke-width="2.2" {{ dims }} aria-hidden="true" focusable="false">
       <path d="M12 5v14M5 12h14"/>
+    </svg>
+  {%- when 'shield' -%}
+    <svg viewBox="0 0 24 24" {{ stroke_common }} stroke-width="1.6" {{ dims }} aria-hidden="true" focusable="false">
+      <path d="M12 3 4.5 6v6.2c0 4.3 3.1 7.6 7.5 8.8 4.4-1.2 7.5-4.5 7.5-8.8V6L12 3Z"/>
+      <path d="m9 12 2.2 2.2L15.4 10"/>
+    </svg>
+  {%- when 'no-chem' -%}
+    <svg viewBox="0 0 24 24" {{ stroke_common }} stroke-width="1.6" {{ dims }} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.4"/>
+      <path d="M6.4 17.6 17.6 6.4"/>
+    </svg>
+  {%- when 'drop' -%}
+    <svg viewBox="0 0 24 24" {{ stroke_common }} stroke-width="1.6" {{ dims }} aria-hidden="true" focusable="false">
+      <path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4Z"/>
     </svg>
 {%- endcase -%}

@@ -15,6 +15,38 @@
       <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
     {%- endunless -%}
 
+    {%- comment -%}
+      PURELANE — TEMPORARY WEBFONT LOADING (DEV-014)
+
+      The Purelane design specifies Outfit and Inter. Shopify's font library
+      does not carry either, so settings.type_header_font / type_body_font
+      cannot supply them and Dawn's font_face pipeline above is not an option.
+
+      This mirrors reference/purelane-homepage.html line 11 exactly: the same
+      two families, the same weights, the same display=swap. It exists so that
+      the visual comparison in Phases 2-7 is measured against the real
+      typography rather than a fallback stack.
+
+      It is a KNOWN PERFORMANCE COST and is deliberately temporary:
+        - a render-blocking stylesheet on a third-party origin
+        - two extra DNS/TLS handshakes before any glyph is requested
+        - no control over the font subset or cache policy
+      Phase 9 replaces this with self-hosted, subset, preloaded woff2 served
+      from the theme's own assets, at which point this block is deleted.
+
+      The RemoteAsset warning below is suppressed deliberately, not because the
+      rule is wrong -- it is exactly right, and Phase 9 acts on it. It is muted
+      so that genuinely new warnings stay visible in later phases.
+    {%- endcomment -%}
+    {% comment %}theme-check-disable RemoteAsset{% endcomment %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    >
+    {% comment %}theme-check-enable RemoteAsset{% endcomment %}
+
     <title>
       {{ page_title }}
       {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}

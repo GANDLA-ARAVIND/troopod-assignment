@@ -1,0 +1,519 @@
+{%- comment -%}
+  PURELANE HERO
+  Reference: purelane-homepage.html lines 945-997 (markup), 206-332 (CSS),
+  1613-1682 (behaviour).
+
+  Slides are section blocks, so a merchant can add, remove, reorder and
+  reconfigure them. The prototype hardcoded exactly three.
+
+  Every price is real Shopify data or derived from it. Nothing is typed.
+{%- endcomment -%}
+
+{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
+{{ 'purelane-hero.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'purelane-hero.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign slides = section.blocks | where: 'type', 'slide'
+  assign badges = section.blocks | where: 'type', 'badge'
+  assign heading_lines = section.settings.heading | strip | newline_to_br | split: '<br />'
+-%}
+
+<section
+  class="pl pl-hero pl-hero--{{ section.settings.section_height }}"
+  data-pl-section="hero"
+>
+  {%- if section.settings.show_local_background -%}
+    <span class="pl-hero__bg" aria-hidden="true"></span>
+  {%- endif -%}
+  <span class="pl-hero__scrim" aria-hidden="true"></span>
+
+  <purelane-reveal class="pl-hero__grid">
+    {%- comment -%} ---------------- desktop badge rail ---------------- {%- endcomment -%}
+    {%- if badges.size > 0 and section.settings.show_badges -%}
+      <ul class="pl-hero__badges pl-glass-2" aria-label="{{ section.settings.badges_label | escape }}">
+        {%- for block in badges -%}
+          <li class="pl-hero__badge" {{ block.shopify_attributes }}>
+            <span class="pl-hero__badge-icon">
+              {%- render 'purelane-icon', icon: block.settings.icon -%}
+            </span>
+            <span>{{ block.settings.text }}</span>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+
+    {%- comment -%} ---------------- copy ---------------- {%- endcomment -%}
+    <div class="pl-hero__copy">
+      {%- if section.settings.heading != blank or section.settings.heading_accent != blank -%}
+        {%- assign heading_tag = section.settings.heading_tag | default: 'h1' -%}
+        <{{ heading_tag }} class="pl-d1 pl-hero__heading pl-rv is-in">
+          {%- for line in heading_lines -%}
+            {{ line | strip }}{% unless forloop.last %}<br>{% endunless %}
+          {%- endfor -%}
+          {%- if section.settings.heading_accent != blank -%}
+            {%- if section.settings.heading != blank %}<br>{% endif -%}
+            <span class="pl-accent-text">{{ section.settings.heading_accent }}</span>
+          {%- endif -%}
+        </{{ heading_tag }}>
+      {%- endif -%}
+
+      {%- if section.settings.show_rule -%}
+        <div class="pl-rule pl-rv pl-rv--d1" aria-hidden="true">
+          <i></i>
+          {%- render 'purelane-icon', icon: 'leaf' -%}
+          <i></i>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.lede != blank -%}
+        <p class="pl-lede pl-rv pl-rv--d2">{{ section.settings.lede }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.cta_primary_label != blank or section.settings.cta_secondary_label != blank -%}
+        <div class="pl-hero__cta pl-rv pl-rv--d3">
+          {%- if section.settings.cta_primary_label != blank -%}
+            <a class="pl-btn pl-btn--primary" href="{{ section.settings.cta_primary_link | default: '#' }}">
+              {{ section.settings.cta_primary_label }}
+              {%- render 'purelane-icon', icon: 'arrow' -%}
+            </a>
+          {%- endif -%}
+          {%- if section.settings.cta_secondary_label != blank -%}
+            <a class="pl-btn pl-btn--ghost" href="{{ section.settings.cta_secondary_link | default: '#' }}">
+              {{ section.settings.cta_secondary_label }}
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%}
+        Mobile badge strip. Same blocks as the rail above, rendered a second
+        time because the design places them differently below 900px. Only one
+        of the two is ever displayed, so neither duplicates the other in the
+        accessibility tree.
+      {%- endcomment -%}
+      {%- if badges.size > 0 and section.settings.show_badges -%}
+        <ul class="pl-hero__strip pl-rv pl-rv--d4" aria-label="{{ section.settings.badges_label | escape }}">
+          {%- for block in badges -%}
+            <li class="pl-hero__strip-item pl-glass-2" {{ block.shopify_attributes }}>
+              {%- render 'purelane-icon', icon: block.settings.icon -%}
+              {{ block.settings.text }}
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} ---------------- product stage ---------------- {%- endcomment -%}
+    {%- if slides.size > 0 -%}
+      <div class="pl-hero__prod">
+        <purelane-hero-stage
+          class="pl-hero__stage-wrap"
+          data-autoplay="{{ section.settings.autoplay }}"
+          data-interval="{{ section.settings.autoplay_interval }}"
+          data-parallax="{{ section.settings.enable_parallax }}"
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="{{ section.settings.stage_label | escape }}"
+        >
+          <div class="pl-hero__stage">
+            {%- for block in slides -%}
+              {%- liquid
+                assign p1 = block.settings.product_1
+                assign p2 = block.settings.product_2
+                assign p3 = block.settings.product_3
+
+                assign count = 0
+                if p1 != blank
+                  assign count = count | plus: 1
+                endif
+                if p2 != blank
+                  assign count = count | plus: 1
+                endif
+                if p3 != blank
+                  assign count = count | plus: 1
+                endif
+
+                # Compare-at is the honest "buying these separately" total:
+                # each product's compare_at_price where it has one, else its
+                # own price. Never typed.
+                assign sum_price = 0
+                assign sum_compare = 0
+
+                if p1 != blank
+                  assign sum_price = sum_price | plus: p1.price
+                  assign c1 = p1.compare_at_price | default: p1.price
+                  assign sum_compare = sum_compare | plus: c1
+                endif
+                if p2 != blank
+                  assign sum_price = sum_price | plus: p2.price
+                  assign c2 = p2.compare_at_price | default: p2.price
+                  assign sum_compare = sum_compare | plus: c2
+                endif
+                if p3 != blank
+                  assign sum_price = sum_price | plus: p3.price
+                  assign c3 = p3.compare_at_price | default: p3.price
+                  assign sum_compare = sum_compare | plus: c3
+                endif
+
+                # The offer product is the thing actually being sold on this
+                # slide - a "any 2 for X" bundle product, for instance. Its
+                # price is Shopify's, not ours. Without one, the slide prices
+                # itself as the sum of the products shown.
+                assign offer = block.settings.offer_product
+                if offer != blank
+                  assign slide_price = offer.price
+                else
+                  assign slide_price = sum_price
+                endif
+              -%}
+
+              <div
+                class="pl-hero__slide pl-hero__slide--{{ count }}"
+                data-label="{{ block.settings.label | escape }}"
+                role="group"
+                aria-roledescription="slide"
+                aria-label="{{ forloop.index }} / {{ slides.size }}{% if block.settings.label != blank %} — {{ block.settings.label | escape }}{% endif %}"
+                {{ block.shopify_attributes }}
+              >
+                {%- if p1 != blank -%}
+                  {%- render 'purelane-media',
+                    image: p1.featured_image,
+                    alt_fallback: p1.title,
+                    class: 'pl-hero__bottle pl-hero__bottle--a pl-hero__bottle--d1',
+                    widths: '240,360,480,720,960',
+                    sizes: '(max-width: 900px) 60vw, 30vw',
+                    loading: block.settings.image_loading,
+                    fetchpriority: block.settings.image_priority
+                  -%}
+                {%- endif -%}
+                {%- if p2 != blank -%}
+                  {%- render 'purelane-media',
+                    image: p2.featured_image,
+                    alt_fallback: p2.title,
+                    class: 'pl-hero__bottle pl-hero__bottle--b pl-hero__bottle--d2',
+                    widths: '240,360,480,720,960',
+                    sizes: '(max-width: 900px) 60vw, 30vw'
+                  -%}
+                {%- endif -%}
+                {%- if p3 != blank -%}
+                  {%- render 'purelane-media',
+                    image: p3.featured_image,
+                    alt_fallback: p3.title,
+                    class: 'pl-hero__bottle pl-hero__bottle--c pl-hero__bottle--d3',
+                    widths: '240,360,480,720,960',
+                    sizes: '(max-width: 900px) 60vw, 30vw'
+                  -%}
+                {%- endif -%}
+
+                {%- if section.settings.show_price_tags and count > 0 -%}
+                  <div class="pl-hero__ptag pl-glass-2">
+                    {%- if block.settings.label != blank -%}
+                      <span class="pl-hero__ptag-label">{{ block.settings.label }}</span>
+                    {%- endif -%}
+                    {%- render 'purelane-price',
+                      price: slide_price,
+                      compare_at: sum_compare,
+                      saving: block.settings.saving_style
+                    -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            {%- endfor -%}
+          </div>
+
+          {%- if slides.size > 1 -%}
+            <div class="pl-hero__dots">
+              {%- for block in slides -%}
+                {%- capture dot_label -%}
+                  {{ forloop.index }} / {{ slides.size }}{% if block.settings.label != blank %} — {{ block.settings.label }}{% endif %}
+                {%- endcapture -%}
+                <button
+                  type="button"
+                  class="pl-hero__dot"
+                  aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                  tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+                  aria-label="{{ dot_label | strip | escape }}"
+                ></button>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+
+          <span class="pl-sr" role="status" aria-live="polite" data-pl-hero-status></span>
+        </purelane-hero-stage>
+      </div>
+    {%- elsif request.design_mode -%}
+      <div class="pl-hero__prod">
+        <p class="pl-body-s">
+          Add a slide block to show products here.
+        </p>
+      </div>
+    {%- endif -%}
+  </purelane-reveal>
+</section>
+
+{% schema %}
+{
+  "name": "Purelane hero",
+  "tag": "section",
+  "class": "purelane-hero-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "section_height",
+      "label": "Section height",
+      "options": [
+        { "value": "full", "label": "Full viewport" },
+        { "value": "large", "label": "Large (720px)" },
+        { "value": "medium", "label": "Medium (560px)" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_local_background",
+      "label": "Show background gradient",
+      "info": "Temporary. The shared animated background is a separate section built later; until then the hero paints its own.",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "textarea",
+      "id": "heading",
+      "label": "Heading",
+      "info": "One line per line break.",
+      "default": "Clean\nThat"
+    },
+    {
+      "type": "text",
+      "id": "heading_accent",
+      "label": "Accent line",
+      "info": "Added as the final heading line, in the accent colour.",
+      "default": "Lasts"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "info": "Use H1 when this is the page's main heading. Switch to H2 if the page already has an H1 or this hero is used twice.",
+      "options": [
+        { "value": "h1", "label": "H1" },
+        { "value": "h2", "label": "H2" }
+      ],
+      "default": "h1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rule",
+      "label": "Show divider",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "lede",
+      "label": "Description",
+      "default": "Homecare that works on the toughest grime, made from plants. Kind to your home, your family and the world outside it."
+    },
+    {
+      "type": "header",
+      "content": "Buttons"
+    },
+    {
+      "type": "text",
+      "id": "cta_primary_label",
+      "label": "Primary button label",
+      "default": "Shop now"
+    },
+    {
+      "type": "url",
+      "id": "cta_primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "cta_secondary_label",
+      "label": "Secondary button label",
+      "default": "How it works"
+    },
+    {
+      "type": "url",
+      "id": "cta_secondary_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "header",
+      "content": "Product stage"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price_tags",
+      "label": "Show price tags",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "stage_label",
+      "label": "Carousel accessible name",
+      "default": "Featured product offers"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Auto-rotate slides",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_interval",
+      "label": "Seconds per slide",
+      "min": 2,
+      "max": 10,
+      "step": 0.1,
+      "unit": "s",
+      "default": 3.8
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_parallax",
+      "label": "Enable scroll and pointer parallax",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Promises"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_badges",
+      "label": "Show promise badges",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "badges_label",
+      "label": "Promises accessible name",
+      "default": "Product promises"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Offer label",
+          "default": "Single bottle"
+        },
+        {
+          "type": "product",
+          "id": "product_1",
+          "label": "Product 1",
+          "info": "Shown on the left, behind."
+        },
+        {
+          "type": "product",
+          "id": "product_2",
+          "label": "Product 2",
+          "info": "Shown on the right."
+        },
+        {
+          "type": "product",
+          "id": "product_3",
+          "label": "Product 3",
+          "info": "Shown centre front, largest."
+        },
+        {
+          "type": "product",
+          "id": "offer_product",
+          "label": "Offer product",
+          "info": "Optional. The bundle actually sold on this slide — its price becomes the headline price. Leave empty to total the products above."
+        },
+        {
+          "type": "select",
+          "id": "saving_style",
+          "label": "Saving format",
+          "options": [
+            { "value": "percent", "label": "Percentage off" },
+            { "value": "amount", "label": "Amount saved" },
+            { "value": "none", "label": "Hide" }
+          ],
+          "default": "percent"
+        },
+        {
+          "type": "select",
+          "id": "image_loading",
+          "label": "Image loading",
+          "info": "Set the first slide to Eager so it is not lazy-loaded above the fold.",
+          "options": [
+            { "value": "lazy", "label": "Lazy" },
+            { "value": "eager", "label": "Eager" }
+          ],
+          "default": "lazy"
+        },
+        {
+          "type": "select",
+          "id": "image_priority",
+          "label": "Image priority",
+          "info": "Set the first slide to High to help Largest Contentful Paint.",
+          "options": [
+            { "value": "auto", "label": "Auto" },
+            { "value": "high", "label": "High" }
+          ],
+          "default": "auto"
+        }
+      ]
+    },
+    {
+      "type": "badge",
+      "name": "Promise",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "no-chem", "label": "No chemicals" },
+            { "value": "drop", "label": "Drop" },
+            { "value": "check", "label": "Check" },
+            { "value": "star", "label": "Star" }
+          ],
+          "default": "leaf"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Plant powered"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Purelane hero",
+      "blocks": [
+        { "type": "slide", "settings": { "label": "Single bottle", "image_loading": "eager", "image_priority": "high" } },
+        { "type": "slide", "settings": { "label": "Any 2 products", "saving_style": "amount" } },
+        { "type": "slide", "settings": { "label": "Any 3 products", "saving_style": "amount" } },
+        { "type": "badge", "settings": { "icon": "leaf", "text": "Plant powered" } },
+        { "type": "badge", "settings": { "icon": "shield", "text": "Kids & pet safe" } },
+        { "type": "badge", "settings": { "icon": "no-chem", "text": "Zero harsh chemicals" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
