@@ -1,0 +1,53 @@
+{% comment %}
+  Renders the Purelane rating line: star glyph, value, review count.
+
+  Reads the same metafields Dawn's own card already reads
+  (snippets/card-product.liquid lines 173-206): reviews.rating and
+  reviews.rating_count. Those are Shopify's standard review metafield
+  definitions, so any review app that writes them works without changes.
+
+  Two corrections to the prototype (reference line 1262):
+  - The prototype prints five literal star glyphs regardless of the real value,
+    and the value itself ("4.8") is typed into the markup. Here the value comes
+    from the product and a single star marks the line.
+  - The glyph carried the only meaning. Here the accessible text states the
+    rating and the count in full.
+
+  Renders nothing when the product has no rating, rather than showing "0".
+
+  Accepts:
+  - product: {Object} product to read metafields from (required)
+  - show_count: {Boolean} include the review count. Default true (optional)
+
+  Usage:
+  {% render 'purelane-rating', product: card_product %}
+{% endcomment %}
+
+{%- liquid
+  assign rating = product.metafields.reviews.rating.value
+  assign rating_count = product.metafields.reviews.rating_count.value
+-%}
+
+{%- if rating != blank and rating.rating != blank -%}
+  {%- liquid
+    assign rating_value = rating.rating | round: 1
+    assign rating_max = rating.scale_max | default: 5
+  -%}
+  <div class="pl-rating">
+    <b class="pl-rating__value" aria-hidden="true">
+      {%- render 'purelane-icon', icon: 'star' -%}
+      {{ rating_value }}
+    </b>
+    {%- if show_count != false and rating_count != blank -%}
+      <span aria-hidden="true">
+        &middot; {{ rating_count }} {{ reviews_label | default: 'reviews' }}
+      </span>
+    {%- endif -%}
+    <span class="pl-sr">
+      {{- 'accessibility.star_reviews_info' | t: rating_value: rating_value, rating_max: rating_max -}}
+      {%- if show_count != false and rating_count != blank -%}
+        {{ ' ' }}{{ rating_count }} {{ 'accessibility.total_reviews' | t }}
+      {%- endif -%}
+    </span>
+  </div>
+{%- endif -%}

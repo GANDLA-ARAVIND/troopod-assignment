@@ -63,6 +63,23 @@ The pattern used so far:
 
 **Not done in Phase 0** — no theme push, publish, rename or delete; Horizon untouched and still live; no products, metafields or metaobjects; no Purelane sections, snippets, schemas, CSS or JS; no Git operations of any kind (the user handles Git manually); `reference/purelane-homepage.html` untouched; `shopify theme dev` not yet run.
 
+### Phase 1 — Minimum Purelane foundation *(current)*
+
+**Dawn inspection first, then build**
+- Read Dawn 16.0.0's `snippets/card-product.liquid` (628 lines), `snippets/price.liquid`, `snippets/loading-spinner.liquid`, `assets/product-form.js`, and `layout/theme.liquid`'s asset-loading pattern before writing anything.
+- Conclusion recorded: Dawn's card markup is built around `card__inner` / `.ratio` / `--ratio-percent` and Dawn's `card_style`, card colour scheme and badge-position theme settings. The Purelane card is a glass shell with a fixed-height media slot and a bottom-pinned price row; the two trees do not overlap enough for an override to beat a purpose-built snippet. Dawn's *mechanisms* are reused instead — `<product-form>` + `{% form 'product' %}` for real AJAX add-to-cart, `loading-spinner`, the `reviews.rating` metafield convention, and Dawn's locale strings.
+- Confirmed Dawn loads section CSS/JS per section rather than globally, so Purelane sections load `purelane-base.css` themselves and `layout/theme.liquid` is left untouched.
+
+**Built**
+- `assets/purelane-base.css` — one resolved token set plus the primitives the five sections share, including the four-variant product card.
+- `assets/purelane-reveal.js` — `<purelane-reveal>`, the lifecycle-safe pattern later sections copy.
+- Seven snippets: product card, media, price, rating, badge, panel head, icon.
+- `docs/DATA_MODEL.md` — the proposed metafield/metaobject model, with the reasoning for each choice and for what was rejected.
+
+**Deviations decided and logged this phase** — DEV-006 (long-title clamp), DEV-007 (sold-out state), DEV-008 (missing-image tile), DEV-009 (`pl-` namespacing), DEV-010 (single resolved token set), DEV-011 (reveal gated behind JS readiness), DEV-012 (microcopy as snippet defaults), DEV-013 (`<img>` instead of CSS background). DEV-001 moved from Planned to Implemented.
+
+**Not done in Phase 1** — no sections (hero, grid, combos, bundles, reviews); no products, metafields or metaobjects created remotely; no scene background; no `purelane-motion.js`; no `config/settings_schema.json` changes; no webfont loaded; no Git operations; `reference/purelane-homepage.html` untouched; nothing rendered in a browser, so no visual verification has taken place.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*
@@ -76,6 +93,11 @@ Human decisions that overrode or directed the assistant:
 
 Assumptions that turned out to be wrong:
 - The plan assumed the development store would arrive with a clean Dawn install, because the assignment brief states Dawn is what new stores start on. It is not — the store provisioned with Horizon. Caught by verifying the theme list before pulling, rather than assuming the pull target existed.
+
+Mistakes made and corrected during Phase 1:
+- **Locale keys.** Purelane microcopy was first added as a `purelane` block in `locales/en.default.json`, which is standard Shopify practice. Theme Check's `MatchingTranslations` rule requires every key to exist in all 51 of Dawn's locale files, so four keys produced **120 errors**. Caught by running Theme Check rather than assuming the edit was safe. Reverted the locale file to stock and moved the strings to snippet parameters with section-setting overrides — which is also better for the assignment, since a merchant can now edit them. Logged as DEV-012.
+- **Filter in a `render` argument.** `{% render 'purelane-badge', text: 'products.product.sold_out' | t %}` is not permitted; Liquid filters cannot be applied to `render` arguments. One Theme Check error, fixed by assigning the translated string first.
+- Both were caught by validation, not by review. Theme Check is now run after every change rather than at the end of a phase.
 
 ## Validation and Testing
 

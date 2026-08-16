@@ -1,0 +1,22 @@
+{% comment %}
+  Renders a Purelane badge.
+
+  The prototype has five near-identical badge treatments under different class
+  names: .pill (product cards), .tag (bundle tiers), .save (combo trays),
+  .flag (combo corner), and .prow em / .cut (saving chips). One component with
+  a style modifier instead.
+
+  Accepts:
+  - text: {String} label (required - renders nothing when blank)
+  - style: {String} pill | tag | save | flag | soldout. Default 'pill'
+  - class: {String} extra classes (optional)
+
+  Usage:
+  {% render 'purelane-badge', text: badge_text %}
+  {% render 'purelane-badge', text: 'Most popular', style: 'flag' %}
+{% endcomment %}
+
+{%- if text != blank -%}
+  {%- assign badge_style = style | default: 'pill' -%}
+  <span class="pl-badge pl-badge--{{ badge_style }} {{ class }}">{{ text | escape }}</span>
+{%- endif -%}

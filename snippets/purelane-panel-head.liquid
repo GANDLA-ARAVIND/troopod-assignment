@@ -1,0 +1,50 @@
+{% comment %}
+  Renders the Purelane section header: kicker, heading, leaf rule, lede.
+
+  This block repeats almost verbatim across #shop, #combos, #bundles,
+  #ingredients, #whybundles and #categories in the prototype (reference lines
+  347-350 for the CSS, and six separate copies of the markup).
+
+  Heading level is a parameter, not fixed, so a section that is added twice or
+  moved in the theme editor still produces a sane document outline.
+
+  Accepts:
+  - kicker: {String} small uppercase eyebrow (optional)
+  - heading: {String} the heading text (optional)
+  - heading_tag: {String} h2 (default) | h1 | h3 (optional)
+  - lede: {String} supporting paragraph (optional)
+  - show_rule: {Boolean} render the leaf divider. Default false (optional)
+  - align: {String} 'center' (default) | 'start' (optional)
+  - class: {String} extra classes (optional)
+
+  Usage:
+  {% render 'purelane-panel-head',
+     kicker: section.settings.kicker,
+     heading: section.settings.heading,
+     show_rule: true %}
+{% endcomment %}
+
+{%- if kicker != blank or heading != blank or lede != blank -%}
+  {%- assign tag = heading_tag | default: 'h2' -%}
+  <div class="pl-panel-head {% if align == 'start' %}pl-panel-head--start{% endif %} {{ class }}">
+    {%- if kicker != blank -%}
+      <span class="pl-kicker">{{ kicker }}</span>
+    {%- endif -%}
+
+    {%- if heading != blank -%}
+      <{{ tag }} class="pl-d2">{{ heading }}</{{ tag }}>
+    {%- endif -%}
+
+    {%- if show_rule -%}
+      <div class="pl-rule" aria-hidden="true">
+        <i></i>
+        {%- render 'purelane-icon', icon: 'leaf' -%}
+        <i></i>
+      </div>
+    {%- endif -%}
+
+    {%- if lede != blank -%}
+      <p class="pl-lede">{{ lede }}</p>
+    {%- endif -%}
+  </div>
+{%- endif -%}

@@ -29,7 +29,7 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 | Phase | Name | Status |
 |---|---|---|
 | 0 | Shopify / Dawn setup | **In progress** — Dawn pulled ✅; store seeding + Git baseline outstanding |
-| 1 | Foundation / design system | Not started |
+| 1 | Foundation / design system | **Minimum foundation implemented — detailed QA pending** |
 | 2 | Hero | Not started |
 | 3 | Shop / Product Grid | Not started |
 | 4 | Best-selling Combos | Not started |
@@ -182,15 +182,40 @@ The brief is unambiguous that the build target is Dawn: *"Build on stock Dawn ra
 
 # Phase 1 — Foundation / design system
 
-**Goal:** the shared token set, primitives, and reusable card contract that four of the five sections depend on.
+**Status: minimum foundation implemented — detailed QA pending.**
 
-**Files:** `assets/purelane-tokens.css`, `assets/purelane-base.css`, `assets/purelane-motion.js`, `assets/purelane-reveal.js`; `snippets/purelane-icon.liquid`, `purelane-panel-head.liquid`, `purelane-badge.liquid`, `purelane-price.liquid`, `purelane-product-media.liquid`, `purelane-rating.liquid`, `purelane-product-card.liquid`; `sections/purelane-scene-background.liquid` + `assets/purelane-scene.css/.js`; `config/settings_schema.json`; `locales/en.default.json`.
+**Goal:** the shared token set, primitives, and reusable card contract that four of the five sections depend on. Scoped deliberately to the minimum the five sections need, not a general design system.
 
-**Work:** collapse the prototype's two stylesheets into one resolved token set (the light V2 values, which are what actually render); normalise the 17 breakpoints into a documented ladder producing identical output; build glass / button / badge / card primitives; build shared reduced-motion, rAF and IntersectionObserver services; build the scene background as a self-discovering global layer.
+### Delivered
+
+| File | Purpose |
+|---|---|
+| `assets/purelane-base.css` | Resolved tokens, scope, type scale, glass, buttons, badges, panel head, price row, rating, media + tile, **product card (4 variants)**, reveal, reduced motion |
+| `assets/purelane-reveal.js` | `<purelane-reveal>` custom element — the theme-editor-safe lifecycle pattern the later sections copy |
+| `snippets/purelane-product-card.liquid` | **The one card.** Variants: `grid` · `stack` · `strip` · `category` |
+| `snippets/purelane-media.liquid` | Real `<img>` with srcset, or the dashed leaf tile fallback |
+| `snippets/purelane-price.liquid` | Price / compare-at / computed saving |
+| `snippets/purelane-rating.liquid` | `reviews.rating` metafield → stars + accessible text |
+| `snippets/purelane-badge.liquid` | pill · tag · save · flag · soldout |
+| `snippets/purelane-panel-head.liquid` | Kicker + heading + leaf rule + lede |
+| `snippets/purelane-icon.liquid` | leaf · arrow · check · star · plus |
+| `docs/DATA_MODEL.md` | Proposed metafield / metaobject model (not yet created on the store) |
+
+### Deliberately deferred
+
+- **Scene background** (`purelane-scene-background`) — the fixed water/gradient layer. Not needed to build the five sections and it is the single largest performance item; Phase 9 territory.
+- **`purelane-motion.js`** (shared rAF + scroll service) — no consumer yet. The hero is its first, in Phase 2.
+- **`config/settings_schema.json`** — untouched. No theme-level Purelane setting has a consumer yet; adding one now would be speculative.
+- **Breakpoint ladder** — the shared breakpoints in use are 760px (rhythm, blur, card sizes) and the fluid `clamp()` type scale, which needs none. Component-specific breakpoints (e.g. the shop grid's 860px) stay at their **reference values**, because consolidating them would change output between 860–899px, and identical output is the constraint. Documented rather than normalised.
+- **Webfont delivery** — see the open decision below.
+
+### Open decision — webfont delivery
+
+The design specifies Outfit (500–800) and Inter (400–700); the prototype loads them from Google Fonts (reference line 11). `--pl-font-display` / `--pl-font-body` are defined with close system fallbacks, but **no webfont is loaded yet**, so sections built in Phase 2+ will render in fallback type until this is settled. Options: self-host both families as theme assets (performance-correct, needs the font files), or replicate the prototype's Google Fonts link in `layout/theme.liquid` (matches the reference exactly, adds a third-party request to fix in Phase 9). **Needs a decision before Phase 2 visual comparison is meaningful.**
 
 **Dependencies:** Phase 0.
-**Testing:** a scratch template rendering every primitive against the prototype at 375 / 768 / 1024 / 1440; computed-token diff against the reference.
-**Risks:** highest-risk phase — a wrong card contract costs four sections; breakpoint consolidation can silently move pixels and must be screenshot-verified.
+**Testing done:** `shopify theme check` — 0 errors. **Not yet done:** no section renders these snippets, so nothing has been visually verified in a browser. No pixel comparison has been made. That is Phases 2–6 and 7/10.
+**Risks:** the card contract is now fixed; if a later section needs a shape it cannot express, the cost lands across four sections.
 
 ---
 

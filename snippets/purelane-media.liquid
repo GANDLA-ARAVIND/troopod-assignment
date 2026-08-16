@@ -1,0 +1,74 @@
+{% comment %}
+  Renders Purelane product artwork, or the authentic no-image fallback.
+
+  The prototype draws products as CSS background-images on <span role="img">
+  (reference lines 267-281). That cannot carry srcset, is invisible to the
+  preload scanner, and disappears in forced-colours mode. Real <img> here.
+
+  When a product has no image, this renders the dashed leaf tile the prototype
+  already uses for missing combo components (reference lines 526-528, 745), so
+  the fallback is part of the established design language rather than invented.
+  See DEV-008.
+
+  Accepts:
+  - image: {Object} Shopify image/media object (optional - absence triggers the tile)
+  - alt: {String} explicit alt text. Defaults to the image's own alt, then to
+      the product title passed as alt_fallback (optional)
+  - alt_fallback: {String} used when the image has no alt set (optional)
+  - sizes: {String} sizes attribute. Default '(max-width: 760px) 108px, 122px'
+  - loading: {String} 'lazy' (default) or 'eager'
+  - fetchpriority: {String} 'high' when this is an LCP candidate (optional)
+  - class: {String} extra classes for the <img> (optional)
+  - decorative: {Boolean} render alt="" and hide from assistive tech (optional)
+
+  Usage:
+  {% render 'purelane-media', image: product.featured_image, alt_fallback: product.title %}
+{% endcomment %}
+
+{%- liquid
+  assign img_sizes = sizes | default: '(max-width: 760px) 108px, 122px'
+  assign img_loading = loading | default: 'lazy'
+  assign extra_class = class | default: ''
+
+  if decorative
+    assign img_alt = ''
+  else
+    assign img_alt = alt | default: image.alt | default: alt_fallback | default: ''
+  endif
+-%}
+
+{%- if image != blank -%}
+  <img
+    src="{{ image | image_url: width: 240 }}"
+    srcset="{{ image | image_url: width: 120 }} 120w, {{ image | image_url: width: 180 }} 180w, {{ image | image_url: width: 240 }} 240w, {{ image | image_url: width: 360 }} 360w, {{ image | image_url: width: 480 }} 480w"
+    sizes="{{ img_sizes }}"
+    alt="{{ img_alt | escape }}"
+    width="{{ image.width }}"
+    height="{{ image.height }}"
+    loading="{{ img_loading }}"
+    {% if fetchpriority %}
+      fetchpriority="{{ fetchpriority }}"
+    {% endif %}
+    {% if decorative %}
+      aria-hidden="true"
+    {% endif %}
+    class="pl-media {{ extra_class }}"
+  >
+{%- else -%}
+  <span class="pl-tile {{ extra_class }}" aria-hidden="true">
+    {%- render 'purelane-icon', icon: 'leaf' -%}
+  </span>
+  {%- unless decorative -%}
+    {%- if alt_fallback != blank -%}
+      {%- comment -%}
+        Purelane-specific microcopy is not added to locales/en.default.json:
+        Theme Check's MatchingTranslations rule requires every key to exist in
+        all 51 of Dawn's locale files, and editing all 51 to add project strings
+        is a worse trade than a snippet default. Sections expose these strings
+        as settings so a merchant can still change them. See DEV-012.
+      {%- endcomment -%}
+      {%- assign no_image_label = no_image_text | default: 'No image available' -%}
+      <span class="pl-sr">{{ alt_fallback | escape }} &mdash; {{ no_image_label }}</span>
+    {%- endif -%}
+  {%- endunless -%}
+{%- endif -%}

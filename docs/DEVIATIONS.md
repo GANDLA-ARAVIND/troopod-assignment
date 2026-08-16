@@ -24,17 +24,25 @@ This file is that record. Every meaningful difference between `reference/purelan
 
 | ID | Title | Phase | Visual change | Status |
 |---|---|---|---|---|
-| DEV-001 | Desktop product-card artwork sizing bug | 3 | Yes (restores intent) | Planned |
+| DEV-001 | Desktop product-card artwork sizing bug | 1 / 3 | Yes (restores intent) | **Implemented** |
 | DEV-002 | Duplicate SVG IDs in the water layers | 1 | No | Planned |
 | DEV-003 | Dangling `#voices` anchor | 1 / bonus | No | Planned |
 | DEV-004 | `.striphint` visible at all widths | Bonus | Yes (restores intent) | Planned |
 | DEV-005 | Combo says "5 products" but shows 3 | 4 | Yes (documented) | Planned |
+| DEV-006 | Long product titles clamped to two lines | 1 | Yes (documented) | **Implemented** |
+| DEV-007 | Sold-out state added to the card design | 1 | Yes (documented) | **Implemented** |
+| DEV-008 | Missing-image tile promoted to all card variants | 1 | No | **Implemented** |
+| DEV-009 | Purelane CSS namespaced `pl-` | 1 | No | **Implemented** |
+| DEV-010 | Single resolved token set; dead V1 palette dropped | 1 | No | **Implemented** |
+| DEV-011 | Reveal hidden state gated behind JS readiness | 1 | No | **Implemented** |
+| DEV-012 | Purelane microcopy as snippet defaults, not locale keys | 1 | No | **Implemented** |
+| DEV-013 | Product artwork as `<img>`, not CSS background | 1 | No | **Implemented** |
 
 ---
 
 ## DEV-001 — Desktop product-card artwork sizing bug
 
-**Area:** Shop / product grid (`#shop`) · **Phase:** 3 · **Status:** Planned
+**Area:** Shop / product grid (`#shop`) · **Phase:** 1 (foundation) → verified in 3 · **Status:** Implemented
 **Reference:** `reference/purelane-homepage.html` CSS lines 267, 409–411, 614–615; HTML lines 1259–1286
 
 ### Prototype behaviour
@@ -54,11 +62,12 @@ Above 760px the span has no height, no width, and no intrinsic size (a backgroun
 ### Production issue
 The desktop grid shows four product cards with no product visible. Reproducing this would ship an empty media slot on the primary commerce section, break the visual rhythm of the 4-up row, and — once real Shopify product images replace the prototype's CSS backgrounds — be impossible to reproduce faithfully anyway, since a real `<img>` has intrinsic dimensions.
 
-### Planned correction
-Render product media as a real `<img>` inside a fixed-dimension media slot:
-- `.shot` keeps its reference dimensions (150px desktop / 126px ≤760px) and its gradient, radius, border and `overflow:hidden`.
-- The image is sized to the reference's evident intent — matching cards 5–8 at **122px** desktop and the prototype's own **108px** at ≤760px — with `object-fit:contain` and `object-position:center bottom`, mirroring `.pimg`'s `background-size:contain; background-position:center bottom`.
-- Explicit width/height/aspect-ratio to reserve space and avoid CLS.
+### Correction as implemented
+`assets/purelane-base.css` §11, `snippets/purelane-media.liquid`:
+- `.pl-card__shot` keeps the reference dimensions (150px desktop / 126px ≤760px) and its gradient, radius, border and `overflow:hidden`.
+- `.pl-card__shot .pl-media` is given `height: 122px` **unconditionally** — matching cards 5–8 in the same grid, which is what establishes the intended size — dropping to `108px` at ≤760px, which is the prototype's own mobile value.
+- Artwork renders as a real `<img>` with `object-fit: contain` and `object-position: center bottom`, mirroring `.pimg`'s `background-size: contain; background-position: center bottom`.
+- Explicit `width`/`height` attributes reserve space, so the fix does not introduce CLS.
 
 ### Reason
 Explicitly approved by the user: *"Do NOT reproduce this apparent CSS bug… preserve the intended visual product-card design, make product media render correctly at desktop and mobile, keep the card layout visually consistent with the reference."* The prototype contradicts itself within the same grid — four cards render artwork, four do not — so the design intent is established by the file itself, not inferred.
@@ -163,6 +172,190 @@ The assignment requires real Shopify data and forbids hardcoding what a merchant
 
 ### Visual output change
 **Yes (documented).** The "Complete home bundle" card gains a small `+2` overflow tile after its three product tiles. Every other combo card is unchanged. The alternative — a card whose stated count contradicts its own artwork — is not defensible in production.
+
+---
+
+## DEV-006 — Long product titles clamped to two lines
+
+**Area:** Product card (all consumers) · **Phase:** 1 · **Status:** Implemented
+**Reference:** CSS line 414 (`.card h4`), HTML lines 1261–1425
+
+### Prototype behaviour
+`.card h4` sets `line-height:1.2` and `margin-bottom:7px` with no height constraint and no clamp. Every title in the file was hand-picked to fit one or two lines, so the grid always looked even.
+
+### Production issue
+The assignment requires a seeded product **with a very long title**. In a real catalogue, one card's title wrapping to four lines pushes that card taller than its row neighbours. Because `.pr` is bottom-pinned with `margin-top:auto`, the card grows rather than the price moving — so a single long title visibly breaks the row rhythm the design depends on, worst at 375px where the 2-up column is roughly 170px wide.
+
+### Correction as implemented
+`.pl-card__title` in `assets/purelane-base.css` §11: two-line clamp via `-webkit-line-clamp`, with `min-height: 2.4em` (two lines at `line-height: 1.2`) so short titles reserve the same space as long ones and every card in a row starts its price row at the same offset. The full untruncated title remains in the DOM and is therefore fully available to assistive technology and to search engines — only the visual presentation is clipped.
+
+### Reason
+Preserving the card rhythm is preserving the design. The alternative — letting titles run to arbitrary length — changes the visual output far more than a clamp does.
+
+### Visual output change
+**Yes (documented).** Titles longer than two lines are visually truncated with an ellipsis. Every title in the reference file fits within two lines, so **no card in the reference renders differently**. The change is only observable with the assignment's required long-title test product.
+
+---
+
+## DEV-007 — Sold-out state added to the card design
+
+**Area:** Product card (all consumers) · **Phase:** 1 · **Status:** Implemented
+**Reference:** no source — the prototype has no sold-out state
+
+### Prototype behaviour
+Nothing in the prototype is ever unavailable. Every card renders an enabled "Add to cart" button, and there is no disabled button style, no sold-out badge, and no unavailable treatment anywhere in the 1,716 lines.
+
+### Production issue
+The assignment requires a seeded **sold-out product**, and it will appear in the shop grid, potentially as a combo component and as a bundle tier. Shopify knows the state via `product.available`; the design has no vocabulary for expressing it.
+
+### Correction as implemented
+Built from the design's existing parts rather than invented:
+- **Badge** — `.pl-badge--soldout` reuses the exact geometry of `.pill` (8.5px, `.13em` tracking, `4px 9px`, `999px` radius, 86% white fill) with a neutral violet hairline and `--pl-paper-3` ink instead of the amber/olive promotional pair, so it reads as status rather than as a promotion. It occupies the same corner slot and takes precedence over `custom.badge`.
+- **Button** — the existing `.pl-btn--ghost` at `opacity: .55`, `cursor: not-allowed`, hover lift removed, with `disabled` set.
+- **Label** — the button text changes to Dawn's own `products.product.sold_out` string, and visually-hidden text names the product, so the state is never conveyed by colour or opacity alone.
+- **Artwork** — `opacity: .62` on the image only.
+
+### Reason
+Required by the brief's own test data. Every value used already exists in the design; no new colour, radius, type size or spacing step was introduced.
+
+### Visual output change
+**Yes (documented).** A state the reference cannot display. No in-stock card renders differently.
+
+---
+
+## DEV-008 — Missing-image tile promoted to all card variants
+
+**Area:** Product card (all consumers) · **Phase:** 1 · **Status:** Implemented
+**Reference:** CSS lines 526–528 and 745; HTML line 1189 (the laundry combo's middle item)
+
+### Prototype behaviour
+The design already has a no-artwork treatment: `.stack .it .tile`, a dashed-border rounded tile containing the leaf icon, used for the one combo component that has no illustration. It exists **only** inside combo trays; the shop grid, bundle strips and category tiles have no equivalent because every product there was given artwork.
+
+### Production issue
+The assignment requires a seeded **product with no image**, and it can appear in any of those sections.
+
+### Correction as implemented
+`.pl-tile` in `assets/purelane-base.css` §10 carries the reference's exact treatment — `rgba(255,255,255,.5)` fill, `1px dashed rgba(75,58,143,.26)`, `9px` radius, olive leaf — and is emitted by `snippets/purelane-media.liquid` whenever `image` is blank. Each card variant sizes it to its own slot: 122×82 in the grid (108×72 ≤760px), 66×44 in stacks, 62×40 in strips, 176px in categories. Visually-hidden text names the product and states that no image is available; the tile itself is `aria-hidden`.
+
+### Reason
+The fallback is the design's own, extended to the slots that needed it. Nothing was invented.
+
+### Visual output change
+**No.** The reference's one no-image case renders identically. The treatment simply now exists in slots the reference never exercised.
+
+---
+
+## DEV-009 — Purelane CSS namespaced `pl-`
+
+**Area:** Foundation · **Phase:** 1 · **Status:** Implemented
+
+### Prototype behaviour
+Generic class names throughout: `.card`, `.badge`, `.price`, `.btn`, `.rating`, `.wrap`, `.glass`, `.media`.
+
+### Production issue
+Dawn 16.0.0 already owns `.card`, `.card__content`, `.badge`, `.price`, `.rating`, `.button`, `.media` and a large `--color-*` custom property set. Transcribing the prototype's class names into the theme would silently restyle Dawn's own product cards, cart drawer, badges and price blocks on every page of the store — including templates we never touch.
+
+### Correction as implemented
+Every Purelane class and custom property is prefixed (`.pl-card`, `.pl-badge`, `--pl-accent`), and the component styles are additionally scoped under a `.pl` root class. `assets/purelane-base.css` is loaded by Purelane sections rather than from `layout/theme.liquid`, so pages without a Purelane section never download it.
+
+### Reason
+Isolation. Dawn's own templates must keep working exactly as they do at the baseline commit.
+
+### Visual output change
+**No.** Class names are not visual output.
+
+---
+
+## DEV-010 — Single resolved token set; dead V1 palette dropped
+
+**Area:** Foundation · **Phase:** 1 · **Status:** Implemented
+**Reference:** style block 1 (lines 12–633), style block 2 (lines 634–823)
+
+### Prototype behaviour
+Two stylesheets. The first declares a full dark design system; the second re-declares `:root` and overrides every surface, button, badge, glass treatment and scene gradient. The second wins, so the page renders **light**. Roughly 190 lines of the first block are unreachable, and a further ~45 lines style a product-detail page (`.crumb`, `.gal-main`, `.vopt`, `.stickybuy`, …) whose markup is not in the file at all.
+
+### Production issue
+Transcribing both blocks would ship a theme where a maintainer cannot tell which value is live, where a merchant-facing colour setting could be silently overridden, and where a quarter of the CSS styles nothing.
+
+### Correction as implemented
+`assets/purelane-base.css` declares one resolved token set — the V2 light values that actually render. The dead V1 tokens and the orphan PDP rules are not carried over. Literals that V2 used inline without tokenising (`#4f7d10`, `#7a9c1e`, `#01423b`, the teal button gradient) are named as `--pl-olive`, `--pl-olive-2`, `--pl-teal-ink`, `--pl-btn-fill` so sections stop repeating raw hex.
+
+### Reason
+The rendered design is the spec. Unreachable code is not part of it.
+
+### Visual output change
+**No.** Only the overriding values were ever visible.
+
+---
+
+## DEV-011 — Reveal hidden state gated behind JS readiness
+
+**Area:** Foundation · **Phase:** 1 · **Status:** Implemented
+**Reference:** CSS lines 157–160; JS lines 1571–1580
+
+### Prototype behaviour
+`.rv { opacity: 0; transform: translateY(30px); filter: blur(7px) }` is applied unconditionally in CSS. A parse-time script then adds `.in` via IntersectionObserver. Roughly 30 elements across the page depend on it.
+
+### Production issue
+Three failure modes leave real content permanently invisible: JavaScript disabled or blocked, the script erroring before the observer is attached, and — the one that matters most here — the **theme editor**. Shopify re-renders a section's DOM on every setting change; the prototype's document-level `querySelectorAll` ran once at parse time and never again, so an edited section would keep its `opacity: 0` markup with nothing left to reveal it. The assignment states explicitly that reconfiguring "should never break anything, **including the animations**".
+
+### Correction as implemented
+- The hidden state is scoped to `purelane-reveal[data-pl-ready] .pl-rv`. The `data-pl-ready` attribute is set by the custom element itself in `connectedCallback`. No JS, no attribute, no hidden state — content renders fully visible.
+- `assets/purelane-reveal.js` defines `<purelane-reveal>`, whose `connectedCallback`/`disconnectedCallback` make it re-initialise on `shopify:section:load` and tear down its observer on unload, with no section-level wiring.
+- `prefers-reduced-motion` is read through a live `change` listener rather than sampled once, and under reduced motion everything is revealed immediately instead of animated.
+
+### Reason
+Theme-editor survival and graceful degradation are both explicit requirements. This is the pattern the four later sections build on.
+
+### Visual output change
+**No.** Identical reveal behaviour when JavaScript runs.
+
+---
+
+## DEV-012 — Purelane microcopy as snippet defaults, not locale keys
+
+**Area:** Foundation · **Phase:** 1 · **Status:** Implemented
+
+### Intended approach
+Purelane-specific strings — "% off", "Save", "reviews", "No image available" — were first added as a `purelane` block in `locales/en.default.json`, which is standard Shopify practice.
+
+### Production issue
+Theme Check's `MatchingTranslations` rule requires every key to exist in **all 51** of Dawn's locale files. Four new keys produced **120 errors**. Satisfying the rule means editing all 51 Dawn locale files to insert English strings into Japanese, Arabic, Finnish and so on — a large diff across files we otherwise never touch, with fake translations in every one.
+
+### Correction as implemented
+The locale file was reverted to stock. Purelane microcopy is a snippet parameter with an English default (`{{ percent_off_label | default: '% off' }}`), and sections expose these as settings, so a merchant can still change every string from the theme editor — which the assignment actually requires, and which a locale key would *not* have given them. Strings that Dawn already translates (`products.product.sold_out`, `add_to_cart`, `choose_options`, `price.regular_price`, `price.sale_price`, `accessibility.star_reviews_info`, `accessibility.total_reviews`) continue to use Dawn's `t` filter and stay fully localised.
+
+### Reason
+Merchant-editability outranks a locale key for display copy, and stock Dawn files are left untouched. Revisit in Phase 11 if the store needs a second language.
+
+### Visual output change
+**No.**
+
+---
+
+## DEV-013 — Product artwork as `<img>`, not a CSS background
+
+**Area:** Foundation · **Phase:** 1 · **Status:** Implemented
+**Reference:** CSS lines 250–281; every `.pimg` span in the markup
+
+### Prototype behaviour
+All 14 product illustrations are base64 SVG data URIs assigned to custom properties in `:root`, applied as `background-image` on `<span class="pimg" role="img" aria-label="…">`, sized by a per-asset `aspect-ratio`.
+
+### Production issue
+- Products come from Shopify, so artwork is a `product.featured_image` on the CDN, not a compile-time constant. A CSS background cannot express that.
+- Background images take no `srcset`/`sizes`, so every viewport downloads the same file.
+- They are invisible to the preload scanner, which matters directly for the hero LCP.
+- They vanish in forced-colours / high-contrast mode, taking the product with them.
+- 15.2 KB of base64 sits in the critical stylesheet, render-blocking and separately uncacheable.
+
+### Correction as implemented
+`snippets/purelane-media.liquid` renders a real `<img>` with a five-step `srcset` (120–480w), a per-variant `sizes`, explicit `width`/`height`, `loading="lazy"` by default and an optional `fetchpriority="high"` for LCP candidates. `object-fit: contain` with `object-position: center bottom` reproduces the prototype's `background-size: contain; background-position: center bottom` exactly. Alt text resolves from the image's own alt, then the product title.
+
+### Reason
+Required by "products, prices, and content come from the platform", and by the performance requirement. The visual result is unchanged.
+
+### Visual output change
+**No.** Same artwork, same fit, same anchor point — different delivery.
 
 ---
 

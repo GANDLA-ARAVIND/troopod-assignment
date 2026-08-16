@@ -1,0 +1,93 @@
+{% comment %}
+  Renders the Purelane price row: current price, compare-at, saving.
+
+  Dawn's snippets/price.liquid emits .price__regular and .price__sale as two
+  parallel blocks toggled by component-price.css, and has no concept of a
+  discount percentage. The Purelane design is a single baseline-aligned row
+  (reference .pr lines 417-420, .prow lines 536-540) with a typed "33% off".
+  So this is a separate snippet, but it follows Dawn's conventions: money
+  filters, settings.currency_code_enabled, and visually-hidden price labels.
+
+  Every figure is COMPUTED. The prototype types "33% off" and "Save Rs.398" as
+  literal strings; nothing here is hardcoded.
+
+  Accepts:
+  - product: {Object} product to price (optional if price/compare_at given)
+  - price: {Number} explicit amount in cents, overrides product (optional)
+  - compare_at: {Number} explicit compare-at in cents (optional)
+  - size: {String} 'lg' for the combo/bundle scale (optional)
+  - saving: {String} 'percent' (default) | 'amount' | 'none'
+  - class: {String} extra classes (optional)
+
+  Usage:
+  {% render 'purelane-price', product: product %}
+  {% render 'purelane-price', price: bundle_price, compare_at: sum, size: 'lg', saving: 'amount' %}
+{% endcomment %}
+
+{%- liquid
+  if price != blank
+    assign pl_price = price
+  else
+    assign pl_price = product.price
+  endif
+
+  if compare_at != blank
+    assign pl_compare = compare_at
+  else
+    assign pl_compare = product.compare_at_price
+  endif
+
+  assign on_sale = false
+  if pl_compare != blank and pl_compare > pl_price
+    assign on_sale = true
+  endif
+
+  assign saving_mode = saving | default: 'percent'
+
+  if settings.currency_code_enabled
+    assign money_now = pl_price | money_with_currency
+    assign money_was = pl_compare | money_with_currency
+  else
+    assign money_now = pl_price | money
+    assign money_was = pl_compare | money
+  endif
+
+  if on_sale
+    assign saved_amount = pl_compare | minus: pl_price
+    assign saved_percent = saved_amount | times: 100.0 | divided_by: pl_compare | round
+    if settings.currency_code_enabled
+      assign money_saved = saved_amount | money_with_currency
+    else
+      assign money_saved = saved_amount | money
+    endif
+  endif
+
+  assign price_classes = 'pl-price'
+  if size == 'lg'
+    assign price_classes = price_classes | append: ' pl-price--lg'
+  endif
+  if class != blank
+    assign price_classes = price_classes | append: ' ' | append: class
+  endif
+-%}
+
+<div class="{{ price_classes }}">
+  <span class="pl-sr">{{ 'products.product.price.sale_price' | t }}</span>
+  <strong class="pl-price__now">{{ money_now }}</strong>
+
+  {%- if on_sale -%}
+    <span class="pl-sr">{{ 'products.product.price.regular_price' | t }}</span>
+    <s class="pl-price__was">{{ money_was }}</s>
+
+    {%- comment -%}
+      Label formats are snippet defaults, overridable per section so a merchant
+      can reword them. They are not locale keys: see DEV-012.
+    {%- endcomment -%}
+    {%- case saving_mode -%}
+      {%- when 'percent' -%}
+        <em class="pl-price__save">{{ saved_percent }}{{ percent_off_label | default: '% off' }}</em>
+      {%- when 'amount' -%}
+        <em class="pl-price__save">{{ save_label | default: 'Save' }} {{ money_saved }}</em>
+    {%- endcase -%}
+  {%- endif -%}
+</div>

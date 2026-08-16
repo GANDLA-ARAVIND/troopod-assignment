@@ -1,0 +1,237 @@
+{% comment %}
+  PURELANE PRODUCT CARD — the single card abstraction.
+
+  The assignment: "Several sections render similar cards. Build accordingly."
+  This snippet is that card. It is consumed by the shop grid, by the combo
+  tray stacks, by the bundle tier strips, and by the category tiles, with a
+  variant switch rather than four copies of the markup.
+
+  WHY NOT DAWN'S snippets/card-product.liquid
+  It is reused in spirit, not in markup. Dawn's card is built around
+  .card__inner / .ratio / --ratio-percent and Dawn's card_style, card colour
+  scheme and badge-position theme settings. The Purelane card is a glass shell
+  with a fixed-height media slot, a corner pill, a rating line and a
+  bottom-pinned price row - the two markup trees do not overlap enough for an
+  override to be cleaner than a purpose-built snippet. What IS reused from
+  Dawn: the <product-form> custom element and {% form 'product' %} for real
+  AJAX add-to-cart (assets/product-form.js), the loading-spinner snippet, the
+  reviews.rating metafield convention, and Dawn's locale strings.
+
+  VARIANTS
+  - grid     full card: media, badge, title, rating, price, CTA   (#shop)
+  - stack    compact tile + caption, no chrome                    (#combos)
+  - strip    bare artwork only                                    (#bundles)
+  - category artwork + label                                      (bonus)
+
+  EDGE CASES HANDLED HERE, ONCE, FOR EVERY CONSUMER
+  - sold out       real product.available, disabled CTA, neutral badge, and the
+                   state stated in text rather than by colour alone   (DEV-007)
+  - missing image  the prototype's own dashed leaf tile               (DEV-008)
+  - long title     two-line clamp with reserved height so a long title cannot
+                   break row rhythm                                   (DEV-006)
+  - no compare-at  compare-at and saving are simply omitted, never "0% off"
+  - no rating      rating line omitted, never "0 stars"
+  - multi-variant  routes to the product page instead of a broken add-to-cart
+  - deleted product / blank input renders nothing
+
+  Accepts:
+  - product: {Object} the product (required - renders nothing when blank)
+  - variant_style: {String} grid | stack | strip | category. Default 'grid'
+  - section_id: {String} owning section id, for unique form ids (required for CTA)
+  - show_rating: {Boolean} default true (grid only)
+  - show_price: {Boolean} default true (grid only)
+  - show_cta: {Boolean} default true (grid only)
+  - saving: {String} passed to purelane-price. 'percent' (default) | 'amount' | 'none'
+  - badge_text: {String} explicit badge override. Falls back to the product's
+      custom.badge metafield (optional)
+  - caption: {String} stack variant benefit caption. Falls back to the
+      product's custom.benefit metafield (optional)
+  - image_loading: {String} 'lazy' (default) | 'eager'
+  - image_fetchpriority: {String} 'high' for LCP candidates (optional)
+  - image_sizes: {String} sizes attribute override (optional)
+  - class: {String} extra classes on the card root (optional)
+
+  Usage:
+  {% render 'purelane-product-card', product: product, section_id: section.id %}
+  {% render 'purelane-product-card', product: item, variant_style: 'stack' %}
+{% endcomment %}
+
+{%- if product != blank -%}
+  {%- liquid
+    assign style = variant_style | default: 'grid'
+    assign is_available = product.available
+    assign first_variant = product.selected_or_first_available_variant
+
+    # Badge: explicit override first, then the product's own metafield.
+    # Never a hardcoded "Best seller".
+    assign pl_badge = badge_text | default: product.metafields.custom.badge.value
+
+    # Benefit caption for combo stacks, same precedence.
+    assign pl_caption = caption | default: product.metafields.custom.benefit.value
+
+    # A product with several variants cannot be added from a card without a
+    # variant picker, so the CTA becomes a link to the product page.
+    assign needs_options = false
+    if product.variants_count > 1
+      assign needs_options = true
+    endif
+
+    assign card_classes = 'pl-card pl-card--' | append: style
+    unless is_available
+      assign card_classes = card_classes | append: ' pl-card--soldout'
+    endunless
+    if style == 'grid' or style == 'category'
+      assign card_classes = card_classes | append: ' pl-glass'
+    endif
+    if class != blank
+      assign card_classes = card_classes | append: ' ' | append: class
+    endif
+  -%}
+
+  {%- case style -%}
+    {%- comment -%} ---------------- STACK: combo tray items ---------------- {%- endcomment -%}
+    {%- when 'stack' -%}
+      <span class="{{ card_classes }}">
+        {%- render 'purelane-media',
+          image: product.featured_image,
+          alt_fallback: product.title,
+          sizes: '(max-width: 760px) 56px, 66px'
+        -%}
+        {%- if pl_caption != blank -%}
+          <span class="pl-card__caption">{{ pl_caption }}</span>
+        {%- endif -%}
+      </span>
+
+    {%- comment -%} ---------------- STRIP: bundle tier artwork ---------------- {%- endcomment -%}
+    {%- when 'strip' -%}
+      <span class="{{ card_classes }}">
+        {%- render 'purelane-media',
+          image: product.featured_image,
+          alt_fallback: product.title,
+          decorative: true,
+          sizes: '(max-width: 760px) 54px, 62px'
+        -%}
+      </span>
+
+    {%- comment -%} ---------------- CATEGORY: artwork + label ---------------- {%- endcomment -%}
+    {%- when 'category' -%}
+      <a class="{{ card_classes }}" href="{{ product.url }}">
+        <span class="pl-card__ph">
+          {%- render 'purelane-media',
+            image: product.featured_image,
+            alt_fallback: product.title,
+            decorative: true,
+            sizes: '(max-width: 760px) 142px, 176px'
+          -%}
+        </span>
+        <span class="pl-card__txt">
+          <span class="pl-card__title">{{ product.title | escape }}</span>
+          {%- if pl_caption != blank -%}
+            <span class="pl-card__caption">{{ pl_caption }}</span>
+          {%- endif -%}
+        </span>
+      </a>
+
+    {%- comment -%} ---------------- GRID: the full shop card ---------------- {%- endcomment -%}
+    {%- else -%}
+      {%- liquid
+        assign show_the_rating = true
+        if show_rating == false
+          assign show_the_rating = false
+        endif
+        assign show_the_price = true
+        if show_price == false
+          assign show_the_price = false
+        endif
+        assign show_the_cta = true
+        if show_cta == false
+          assign show_the_cta = false
+        endif
+        assign form_id = 'pl-add-' | append: section_id | append: '-' | append: product.id
+        assign title_id = 'pl-title-' | append: section_id | append: '-' | append: product.id
+        assign sold_out_label = 'products.product.sold_out' | t
+      -%}
+      <article class="{{ card_classes }}">
+        <div class="pl-card__shot">
+          {%- if is_available == false -%}
+            <span class="pl-card__badge">
+              {%- render 'purelane-badge', text: sold_out_label, style: 'soldout' -%}
+            </span>
+          {%- elsif pl_badge != blank -%}
+            <span class="pl-card__badge">
+              {%- render 'purelane-badge', text: pl_badge, style: 'pill' -%}
+            </span>
+          {%- endif -%}
+
+          {%- render 'purelane-media',
+            image: product.featured_image,
+            alt_fallback: product.title,
+            loading: image_loading,
+            fetchpriority: image_fetchpriority,
+            sizes: image_sizes
+          -%}
+        </div>
+
+        <h3 class="pl-card__title" id="{{ title_id }}">
+          <a class="pl-card__link" href="{{ product.url }}">{{ product.title | escape }}</a>
+        </h3>
+
+        {%- if show_the_rating -%}
+          {%- render 'purelane-rating', product: product -%}
+        {%- endif -%}
+
+        {%- if show_the_price -%}
+          {%- render 'purelane-price', product: product, saving: saving, class: 'pl-card__price' -%}
+        {%- endif -%}
+
+        {%- if show_the_cta -%}
+          <div class="pl-card__cta">
+            {%- if is_available == false -%}
+              <button type="button" class="pl-btn pl-btn--ghost pl-btn--sm pl-btn--full" disabled>
+                {{ 'products.product.sold_out' | t }}
+                <span class="pl-sr">&mdash; {{ product.title | escape }}</span>
+              </button>
+
+            {%- elsif needs_options -%}
+              <a class="pl-btn pl-btn--ghost pl-btn--sm pl-btn--full" href="{{ product.url }}">
+                {{ 'products.product.choose_options' | t }}
+                <span class="pl-sr">&mdash; {{ product.title | escape }}</span>
+              </a>
+
+            {%- else -%}
+              {%- comment -%}
+                Dawn's <product-form> handles the fetch, the cart drawer or cart
+                notification refresh, and error messaging. Reusing it means the
+                Purelane card behaves exactly like every other Dawn card.
+              {%- endcomment -%}
+              <product-form data-section-id="{{ section_id }}">
+                {%- form 'product',
+                  product,
+                  id: form_id,
+                  class: 'pl-card__form',
+                  novalidate: 'novalidate',
+                  data-type: 'add-to-cart-form'
+                -%}
+                  <input
+                    type="hidden"
+                    name="id"
+                    value="{{ first_variant.id }}"
+                    class="product-variant-id"
+                  >
+                  <button
+                    type="submit"
+                    name="add"
+                    class="pl-btn pl-btn--ghost pl-btn--sm pl-btn--full"
+                    aria-labelledby="{{ form_id }}-label {{ title_id }}"
+                  >
+                    <span id="{{ form_id }}-label">{{ 'products.product.add_to_cart' | t }}</span>
+                    {%- render 'loading-spinner' -%}
+                  </button>
+                {%- endform -%}
+              </product-form>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </article>
+  {%- endcase -%}
+{%- endif -%}
