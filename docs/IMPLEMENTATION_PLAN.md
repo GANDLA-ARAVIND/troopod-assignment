@@ -34,7 +34,7 @@ Approved plan for the Troopod Shopify AI Product Engineer assignment.
 | 3 | Shop / Product Grid | **Implemented — not yet browser-verified** |
 | 4 | Best-selling Combos | **Implemented — not yet browser-verified** |
 | 5 | Bundles | **Implemented — not yet browser-verified** |
-| 6 | Reviews Rail | Not started |
+| 6 | Reviews Rail | **Implemented — not yet browser-verified** |
 | 7 | Responsive QA | Not started |
 | 8 | Accessibility QA | Not started |
 | 9 | Performance QA | Not started |
@@ -301,10 +301,21 @@ The design specifies Outfit (500–800) and Inter (400–700); the prototype loa
 
 # Phase 6 — Reviews Rail
 
-**Files:** `sections/purelane-reviews.liquid`, `assets/purelane-section-reviews.css`, `assets/purelane-marquee.js`; `review` metaobject definition.
-**Dependencies:** Phase 1 (rating, badge, glass shell).
-**Testing:** 1 / 3 / 5 / 20 reviews; computed repeat count fills more than 2× viewport at 375px and 2560px; pause on hover **and** keyboard; reduced motion stops the marquee; clones `aria-hidden`; edge mask matches the reference.
-**Risks:** repeat-count maths — a wrong count shows a visible seam; metaobject setup burden for the reviewer.
+**Status: IMPLEMENTED — NOT YET BROWSER-VERIFIED.** All five required sections now exist.
+
+**Files delivered:** `sections/purelane-reviews.liquid`, `snippets/purelane-review-card.liquid`, `assets/purelane-reviews.css`. **No JavaScript** — the marquee is pure CSS, as in the reference.
+
+**Data source:** `review` metaobject entries per [DATA_MODEL.md §3.1](DATA_MODEL.md), with `review` blocks as the fallback so the section works before the definition exists. Product attribution comes from the entry's `product_reference`, so renaming a product updates every review that cites it.
+
+**Marquee:** repeat count and animation duration are **computed**, not fixed — see [DEV-022](DEVIATIONS.md). The repeat count grows until one half of the track exceeds 2,000px (so the `-50%` loop cannot gap), capped at 40 cards total. Duration derives from the real track width, holding a constant 28px/s — the reference's own rate — at every review count. Verified arithmetically across 1, 2, 3, 5, 8, 10 and 20 reviews.
+
+**Accessibility:** only the first set is exposed; every repeat is `aria-hidden`, so no review is announced twice. Star glyphs reflect the real rating with the exact value in visually-hidden text ([DEV-023](DEVIATIONS.md)). Reduced motion **stops** the animation and turns the rail into a normal horizontal scroller, overriding the blanket 0.01ms rule in `purelane-base.css` that would otherwise snap the loop to its end.
+
+**Validation done:** `shopify theme check` — **0 errors, 11 warnings, exactly the stock Dawn baseline.** All five section schemas re-parsed and valid. `purelane-reviews.css` confirmed served by the dev server. Marquee arithmetic verified numerically.
+
+**NOT verified — needs a browser and seeded data:** rendering, seamless looping at 375px through 2560px, pause on hover and focus, reduced-motion behaviour, screen-reader announcement of clones, card widths at the 760px switch, theme editor add/remove/reorder.
+
+**Dependencies:** Phase 1 glass, icon, panel typography. Plus the `review` metaobject definition, or review blocks, which need no store setup.
 
 ---
 

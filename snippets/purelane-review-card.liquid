@@ -1,0 +1,81 @@
+{% comment %}
+  Renders one review card.
+
+  Accepts:
+  - rating: {Number} 1-5 (optional)
+  - title: {String} headline (optional)
+  - body: {String} review text (optional)
+  - author: {String} reviewer name. Falls back to author_fallback (optional)
+  - author_fallback: {String} used when the review has no author (optional)
+  - product: {Object} referenced product, for live attribution (optional)
+  - verified: {Boolean} shows the check icon (optional)
+  - link_product: {Boolean} make the attribution a link (optional)
+  - clone: {Boolean} this is a marquee duplicate. The wrapping set already
+      carries aria-hidden, so nothing extra is needed here (optional)
+  - shopify_attributes: {String} theme editor block attributes (optional)
+
+  Renders nothing when there is neither a title nor a body, so an incomplete
+  metaobject entry produces no broken card.
+{% endcomment %}
+
+{%- if title != blank or body != blank -%}
+  {%- liquid
+    assign stars = rating | round
+    if stars > 5
+      assign stars = 5
+    endif
+    assign who = author | default: author_fallback
+  -%}
+  {%- comment -%}
+    role="listitem" rather than a real <li>: the marquee needs repeated sets
+    wrapped in a container, and a <div> is not a legal child of <ul>. The set
+    wrappers are display:contents, so each card is promoted to a direct child
+    of the track's role="list" in the accessibility tree.
+  {%- endcomment -%}
+  <article class="pl-card pl-glass-2 pl-rcard" role="listitem" {{ shopify_attributes }}>
+    {%- if stars > 0 -%}
+      {%- comment -%}
+        The reference prints five glyphs regardless of the real value. Here the
+        glyph count is the actual rating, and the exact value is stated in text
+        so the meaning never depends on counting stars.
+      {%- endcomment -%}
+      <span class="pl-stars" aria-hidden="true">
+        {%- for i in (1..stars) -%}&#9733;{%- endfor -%}
+      </span>
+      <span class="pl-sr">{{ 'accessibility.star_reviews_info' | t: rating_value: rating, rating_max: 5 }}</span>
+    {%- endif -%}
+
+    {%- if title != blank -%}
+      <p class="pl-rcard__title">{{ title | escape }}</p>
+    {%- endif -%}
+
+    {%- if body != blank -%}
+      <p class="pl-rcard__body">{{ body }}</p>
+    {%- endif -%}
+
+    {%- if who != blank or product != blank -%}
+      <p class="pl-rcard__who">
+        {%- if verified -%}
+          {%- render 'purelane-icon', icon: 'check' -%}
+        {%- endif -%}
+        {%- if who != blank -%}
+          <b>{{ who | escape }}</b>
+        {%- endif -%}
+        {%- if product != blank -%}
+          {%- comment -%}
+            Attribution comes from the product reference, so renaming a product
+            updates every review that mentions it.
+          {%- endcomment -%}
+          <span>
+            &middot;
+            {%- if link_product -%}
+              <a href="{{ product.url }}">{{ product.title | escape }}</a>
+            {%- else -%}
+              {{ product.title | escape }}
+            {%- endif -%}
+          </span>
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+  </article>
+{%- endif -%}

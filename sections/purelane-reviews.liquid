@@ -1,0 +1,328 @@
+{%- comment -%}
+  PURELANE REVIEWS RAIL
+  Reference: purelane-homepage.html lines 1000-1013 (markup), 470-488 (CSS).
+
+  Data source, per docs/DATA_MODEL.md §3.1: `review` metaobject entries. Reviews
+  have no native Shopify object, which makes this the assignment's clearest
+  "where a native field doesn't exist, solve it properly" case. Review blocks
+  are the fallback so the section works before the definition exists on the
+  store; metaobjects win when the list is populated.
+
+  MARQUEE: pure CSS, no JavaScript.
+
+  The reference hand-duplicates its five cards once, because translate3d(-50%)
+  needs the track to hold exactly two copies of the visible set. That only
+  loops seamlessly at the reference's own card count and viewport. Here the
+  repeat count is COMPUTED so one half of the track always exceeds the widest
+  viewport it needs to cover, and the animation duration is derived from the
+  real track width so the pixels-per-second speed stays constant however many
+  reviews a merchant publishes.
+
+  Only the first set is exposed to assistive technology; every repeat is
+  aria-hidden, so reviews are never announced twice.
+{%- endcomment -%}
+
+{{ 'purelane-base.css' | asset_url | stylesheet_tag }}
+{{ 'purelane-reviews.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'purelane-reveal.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign entries = section.settings.reviews.value | default: section.settings.reviews
+  assign review_blocks = section.blocks | where: 'type', 'review'
+
+  assign use_metaobjects = false
+  if entries != blank and entries.size > 0
+    assign use_metaobjects = true
+    assign review_count = entries.size
+  else
+    assign review_count = review_blocks.size
+  endif
+
+  # Card 284px + 12px gap on desktop, 250px + 12px below 760px.
+  assign set_width = review_count | times: 296
+  assign set_width_sm = review_count | times: 262
+
+  # Repeat the set until one half of the track is at least 2000px, so the
+  # -50% loop never exposes a gap on a wide screen. Ceiling division.
+  assign repeats = 1
+  if set_width > 0
+    assign repeats = 2000 | plus: set_width | minus: 1 | divided_by: set_width
+  endif
+  if repeats < 1
+    assign repeats = 1
+  endif
+
+  # Guard the DOM: at most 40 cards on the page in total.
+  assign max_repeats = 20 | divided_by: review_count
+  if max_repeats < 1
+    assign max_repeats = 1
+  endif
+  if repeats > max_repeats
+    assign repeats = max_repeats
+  endif
+
+  assign total_sets = repeats | times: 2
+  assign marq_distance = set_width | times: repeats
+  assign marq_distance_sm = set_width_sm | times: repeats
+-%}
+
+<section
+  class="pl pl-section pl-revband"
+  id="pl-reviews-{{ section.id }}"
+  data-pl-section="reviews"
+>
+  <purelane-reveal>
+    {%- if section.settings.kicker != blank
+      or section.settings.aggregate_text != blank
+      or section.settings.stat_value != blank
+    -%}
+      <div class="pl-wrap">
+        <div class="pl-revhead pl-rv">
+          {%- if section.settings.kicker != blank -%}
+            <span class="pl-kicker">{{ section.settings.kicker }}</span>
+          {%- endif -%}
+
+          {%- if section.settings.aggregate_text != blank or section.settings.aggregate_rating != blank -%}
+            <span class="pl-revhead__agg">
+              {%- if section.settings.show_aggregate_stars -%}
+                <span class="pl-stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+              {%- endif -%}
+              {%- if section.settings.aggregate_rating != blank -%}
+                <b>{{ section.settings.aggregate_rating }}</b>
+              {%- endif -%}
+              {{ section.settings.aggregate_text }}
+            </span>
+          {%- endif -%}
+
+          {%- if section.settings.stat_value != blank -%}
+            <span class="pl-revhead__agg">
+              {{ section.settings.stat_prefix }}
+              <b>{{ section.settings.stat_value }}</b>
+              {{ section.settings.stat_suffix }}
+            </span>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if review_count > 0 -%}
+      {%- comment -%}
+        The rail is full-bleed: it sits outside .pl-wrap, as in the reference.
+      {%- endcomment -%}
+      <div
+        class="pl-revrail pl-rv"
+        style="--pl-marq-distance: {{ marq_distance }}; --pl-marq-distance-sm: {{ marq_distance_sm }}; --pl-marq-speed: {{ section.settings.speed }};"
+      >
+        <div class="pl-revtrack" role="list" aria-label="{{ section.settings.rail_label | escape }}">
+          {%- for set in (1..total_sets) -%}
+            {%- comment -%}
+              Only the first set is real content. Every repeat exists purely to
+              make the loop seamless and is hidden from assistive technology.
+            {%- endcomment -%}
+            <div class="pl-revset" {% unless forloop.first %}aria-hidden="true"{% endunless %}>
+              {%- if use_metaobjects -%}
+                {%- for entry in entries -%}
+                  {%- render 'purelane-review-card',
+                    rating: entry.rating.value.rating,
+                    title: entry.title,
+                    body: entry.body,
+                    author: entry.author,
+                    author_fallback: section.settings.author_fallback,
+                    product: entry.product.value,
+                    verified: entry.verified,
+                    link_product: section.settings.link_product
+                  -%}
+                {%- endfor -%}
+              {%- else -%}
+                {%- for block in review_blocks -%}
+                  {%- if forloop.parentloop.first -%}
+                    {%- assign block_attrs = block.shopify_attributes -%}
+                  {%- else -%}
+                    {%- assign block_attrs = '' -%}
+                  {%- endif -%}
+                  {%- render 'purelane-review-card',
+                    rating: block.settings.rating,
+                    title: block.settings.title,
+                    body: block.settings.body,
+                    author: block.settings.author,
+                    author_fallback: section.settings.author_fallback,
+                    product: block.settings.product,
+                    verified: block.settings.verified,
+                    link_product: section.settings.link_product,
+                    shopify_attributes: block_attrs
+                  -%}
+                {%- endfor -%}
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      </div>
+
+    {%- elsif request.design_mode -%}
+      <div class="pl-wrap">
+        <p class="pl-reviews-empty pl-body-s">
+          Pick review entries in Content, or add a Review block, to show the rail.
+        </p>
+      </div>
+    {%- endif -%}
+  </purelane-reveal>
+</section>
+
+{% schema %}
+{
+  "name": "Purelane reviews",
+  "tag": "section",
+  "class": "purelane-reviews-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "kicker",
+      "label": "Kicker",
+      "default": "That's what they said"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_aggregate_stars",
+      "label": "Show stars beside the rating",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "aggregate_rating",
+      "label": "Overall rating",
+      "default": "4.8"
+    },
+    {
+      "type": "text",
+      "id": "aggregate_text",
+      "label": "Rating text",
+      "default": "from 8,000+ reviews"
+    },
+    {
+      "type": "text",
+      "id": "stat_prefix",
+      "label": "Second stat prefix",
+      "default": "Loved by"
+    },
+    {
+      "type": "text",
+      "id": "stat_value",
+      "label": "Second stat value",
+      "default": "12 lakh+"
+    },
+    {
+      "type": "text",
+      "id": "stat_suffix",
+      "label": "Second stat suffix",
+      "default": "homes"
+    },
+    {
+      "type": "header",
+      "content": "Reviews"
+    },
+    {
+      "type": "metaobject_list",
+      "id": "reviews",
+      "metaobject_type": "review",
+      "label": "Reviews",
+      "info": "Requires the review metaobject definition. When empty, Review blocks are used instead."
+    },
+    {
+      "type": "text",
+      "id": "author_fallback",
+      "label": "Fallback reviewer name",
+      "info": "Used when a review has no author.",
+      "default": "Verified buyer"
+    },
+    {
+      "type": "checkbox",
+      "id": "link_product",
+      "label": "Link the product attribution",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Marquee"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Scroll speed",
+      "info": "Pixels per second. The reference moves at about 28. Motion stops entirely for visitors who prefer reduced motion.",
+      "min": 10,
+      "max": 80,
+      "step": 1,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "text",
+      "id": "rail_label",
+      "label": "Rail accessible name",
+      "default": "Customer reviews"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "limit": 20,
+      "settings": [
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "Rating",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 5
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Headline"
+        },
+        {
+          "type": "textarea",
+          "id": "body",
+          "label": "Review"
+        },
+        {
+          "type": "text",
+          "id": "author",
+          "label": "Reviewer name",
+          "info": "Falls back to the section's fallback name."
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product reviewed",
+          "info": "Attribution stays live: renaming the product updates the review."
+        },
+        {
+          "type": "checkbox",
+          "id": "verified",
+          "label": "Verified buyer",
+          "default": true
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Purelane reviews",
+      "blocks": [
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -194,6 +194,31 @@ No accessibility or lifecycle safety was traded away to make autoplay work — `
 
 **Not done in Phase 5** — reviews, bonus sections, performance optimisation, the accessibility audit, pixel QA. No browser has rendered this section and no bundle products exist on the store, so every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; hero, product-grid and combos files byte-identical.
 
+### Phase 6 — Reviews Rail
+
+**All five required sections now exist.**
+
+**The interesting work was arithmetic, not markup.** The reference's marquee encodes its own content in two constants: five cards duplicated once, and a 52s duration. Both are correct only for the reference's exact review count and only up to about a 1,480px viewport — beyond that, `translate3d(-50%)` exposes a gap before the clone arrives. And a merchant publishing ten reviews instead of five would double the track while keeping 52s, scrolling at double speed. Neither failure is loud; both are silent and content-dependent, which is exactly the class of bug that survives review.
+
+So the repeat count is computed by ceiling division until one half of the track exceeds 2,000px, capped at 40 cards, and the duration derives from the real track width via `calc()` on two inline custom properties. The speed setting is expressed in pixels per second and defaults to 28 — the reference's own rate, 1,480px ÷ 52s. Checked numerically across 1, 2, 3, 5, 8, 10 and 20 reviews: the rate holds at 27.9–28.1px/s throughout, and the DOM never exceeds 40 cards. Logged as DEV-022.
+
+**Built**
+- `sections/purelane-reviews.liquid` — 12 settings, `review` blocks (limit 20), metaobject list primary with blocks as fallback, matching the pattern established for combos.
+- `snippets/purelane-review-card.liquid` — renders nothing when a review has neither title nor body, so an incomplete metaobject entry produces no broken card.
+- `assets/purelane-reviews.css` — head, rail, track, card, responsive, reduced motion.
+
+**Decisions worth recording**
+- **No JavaScript.** The reference marquee is CSS, hover and focus pausing are CSS, and the repeat maths is Liquid. Adding a script would have been invention.
+- **`purelane-rating` was deliberately *not* reused.** Its contract takes a product and reads `reviews.rating` metafields, and it renders one star plus a numeral — the product-card treatment. A review card shows a glyph run. Forcing the reuse would have bent a working contract to fit a different shape; the honest answer was a small dedicated snippet. Recorded because "reuse everything" is the wrong lesson to take from Phase 1.
+- **Reduced motion had to override our own foundation.** `purelane-base.css` sets a blanket `animation-duration: 0.01ms` inside `.pl` under the reduced-motion query — inherited from the reference's approach. For a looping marquee that does not stop it, it *snaps it to its end position*. The reviews CSS overrides with `animation: none` and turns the rail into a normal horizontal scroller so every review stays reachable. The user's brief called this out specifically, and it was a genuine trap in code we had already written.
+
+**Mistake caught by review, not by tooling**
+- The track was first built as `<ul>` containing `<div class="pl-revset">` wrappers containing `<li>` cards. A `<div>` is not a legal child of `<ul>`, which breaks list semantics in exactly the assistive technology the wrappers exist to serve. Theme Check passed it clean — it is not an HTML validator. Restructured to a `role="list"` div with `role="listitem"` articles, with the `display: contents` set wrappers promoting each card to a direct child in the accessibility tree. **This is the second time in the project that a clean Theme Check run has meant nothing about correctness** — the first being the `display: inline` custom-element defect in Phase 2.
+
+**Deviations logged** — DEV-022 (computed repeat count and duration), DEV-023 (stars reflect the real rating, with the exact value in accessible text).
+
+**Not done in Phase 6** — bonus sections, performance optimisation, the accessibility audit, pixel QA, fixes to earlier sections. No browser has rendered this section; no `review` metaobject definition exists on the store. Every runtime claim is reported as unverified. No Git operations. `reference/purelane-homepage.html` unchanged at 151,229 bytes; the four earlier sections byte-identical.
+
 ## AI Mistakes / Corrections
 
 *Nothing to report yet — no implementation has been written.*

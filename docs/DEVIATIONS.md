@@ -45,6 +45,8 @@ This file is that record. Every meaningful difference between `reference/purelan
 | DEV-019 | Carousel a11y: inactive slides inert, pause on focus | 2 | No | **Implemented** |
 | DEV-020 | Purelane custom elements declared `display: block` | 2 (fix) | Yes (restores intent) | **Implemented** |
 | DEV-021 | Bundle per-unit price computed exactly, not hand-rounded | 5 | Yes (documented) | **Implemented** |
+| DEV-022 | Marquee repeat count and duration computed, not fixed | 6 | Yes (restores intent) | **Implemented** |
+| DEV-023 | Review stars reflect the real rating | 6 | Yes (documented) | **Implemented** |
 
 ---
 
@@ -564,6 +566,60 @@ The number has to be true. Picking one of the reference's two conflicting rules 
 
 ### Visual output change
 **Yes (documented).** With the reference's own prices the line reads "Flat ₹174.50 per product" rather than "Flat ₹174 per product", and similarly ₹166.33 and ₹159.80. The type, colour, size and position of the line are unchanged. If exact-to-the-reference whole numbers are preferred over arithmetic correctness, a rounding mode could become a section setting — flagged for the Phase 7 review rather than decided unilaterally.
+
+---
+
+## DEV-022 — Marquee repeat count and duration computed, not fixed
+
+**Area:** Reviews rail (`#reviews`) · **Phase:** 6 · **Status:** Implemented
+**Reference:** CSS lines 479-481, 582; HTML line 1009
+
+### Prototype behaviour
+Five review cards are hand-duplicated once, giving ten. The track animates `translate3d(0)` → `translate3d(-50%)` over 52s (40s below 760px). The `-50%` works only because the track holds exactly two copies of the visible set.
+
+### Production issue
+Two failures, both caused by the numbers being fixed rather than derived.
+
+1. **The loop gaps on wide screens.** Ten cards at 284px + 12px gap make a 2,960px track, so one half is 1,480px. Once the viewport exceeds 1,480px the translation exposes empty space before the clone arrives. The reference is safe only up to about 1,480px wide.
+2. **Speed drifts with the review count.** A merchant publishing ten reviews instead of five doubles the track length, and a fixed 52s duration then scrolls it at double speed. Publish three and it crawls.
+
+Both get worse under merchant control, which is the whole point of the section.
+
+### Correction as implemented
+- **Repeat count is computed.** The review set is repeated until one half of the track is at least 2,000px, using ceiling division, then doubled for the loop. Five reviews → 2 repeats → 20 cards, half-track 2,960px. One review → 7 repeats. Ten → 1 repeat.
+- **DOM is capped** at 40 cards total, so a merchant with 20 reviews does not multiply them further.
+- **Duration is derived from the real track width**: `calc(var(--pl-marq-distance) / var(--pl-marq-speed) * 1s)`, with both values set inline per section instance. The speed setting is expressed in pixels per second, defaulting to **28 — the reference's own rate** (1,480px ÷ 52s = 28.5px/s). Verified across 1, 2, 3, 5, 8, 10 and 20 reviews: the rate holds at 27.9–28.1px/s throughout.
+- A separate distance value is supplied for the 760px breakpoint, where cards narrow to 250px, so the rate stays constant there too.
+
+### Reason
+The reference's constants encode its own content. Once the content is merchant-controlled they stop being correct, and the failure is silent — a gap at the right viewport width, a wrong speed at the wrong review count.
+
+### Visual output change
+**Yes (restores intent).** Identical at the reference's own five reviews and at viewports up to ~1,480px. Above that the reference gaps and this does not. The DOM holds 20 cards rather than 10 at five reviews — the cost of a loop that closes at any width.
+
+**Known difference:** the reference speeds up about 15% below 760px (52s → 40s for a proportionally shorter track). This keeps the rate constant across breakpoints instead. Flagged for the Phase 7 review rather than matched, since the reference's mobile value looks like a hand-tuned constant rather than an intent.
+
+---
+
+## DEV-023 — Review stars reflect the real rating
+
+**Area:** Reviews rail (`#reviews`) · **Phase:** 6 · **Status:** Implemented
+**Reference:** HTML line 1009 — `<div class="st">&#9733;&#9733;&#9733;&#9733;&#9733;</div>` on every card
+
+### Prototype behaviour
+Every review card prints five star glyphs, hardcoded. There is no rating value anywhere in the markup, and no accessible text: the glyphs are the only carrier of meaning.
+
+### Production issue
+Once reviews are real data they carry real ratings, and a four-star review displaying five stars misrepresents a customer. The glyphs are also inaccessible — a screen reader announces "black star black star black star…" or nothing useful, and the value cannot be read at all.
+
+### Correction as implemented
+The glyph count is the review's actual `rating`, rounded to the nearest whole star and clamped to five. The glyph run is `aria-hidden`, and Dawn's own `accessibility.star_reviews_info` string states the exact value in visually-hidden text ("4.8 out of 5 stars"). The glyph itself, its size, colour and letter-spacing are unchanged.
+
+### Reason
+Required by "real Shopify data", and by the accessibility baseline's "ratings have meaningful accessible text".
+
+### Visual output change
+**Yes (documented).** A review rated below 5 shows fewer stars. Every review in the reference is five stars, so at reference data the output is identical. Half-star rendering is not implemented — the reference has no such treatment to reproduce, and the exact value is always available in text.
 
 ---
 
