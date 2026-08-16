@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------
+# Shopify CLI
+# ---------------------------------------------------------------
+.shopify/
+.shopify-cli.yml
+*.theme-check-cache/
+
+# Theme exports / downloads
+*.zip
+
+# ---------------------------------------------------------------
+# Credentials and environment
+# Never commit store URLs with tokens, CLI sessions, or app secrets.
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+.shopify-cli-token
+
+# ---------------------------------------------------------------
+# Node / tooling
+# ---------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.cache/
+dist/
+tmp/
+
+# ---------------------------------------------------------------
+# Editors
+# ---------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*~
+
+# ---------------------------------------------------------------
+# OS
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------
+# Deliberately NOT ignored
+# ---------------------------------------------------------------
+# config/settings_data.json  -> tracked on purpose. It carries the theme
+#   settings and homepage section configuration the reviewer needs in
+#   order to reproduce the build. Standard Shopify practice is to ignore
+#   it on live client stores; here it is part of the deliverable.
+# screenshots/               -> tracked, they are QA evidence for Phase 10.
